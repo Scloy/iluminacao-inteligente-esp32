@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Iluminação Pública Inteligente ESP32 - macOS Edition</title>
+
+  <!-- Google Fonts: Inter, JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <link rel="stylesheet" href="styles.css?v=4.0">
+
+  <!-- Three.js & OrbitControls -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+
+  <!-- WebGL 3D Canvas - Cidade Inteligente -->
+  <div id="webgl-container"></div>
+
+  <!-- WebGL 3D Canvas - Maquete Física (ESP32 & Palitos) -->
+  <div id="webgl-maquete-container" style="display: none;"></div>
+
+  <!-- Container de Etiquetas 3D Flutuantes sobre os Postes -->
+  <div id="pole-3d-tags-container" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5;"></div>
+
+  <!-- 1. TOP MACOS MENU BAR -->
+  <header class="macos-menubar">
+    <div class="menubar-left">
+      <div class="platform-logo" id="btn-hub-menu" title="Central de Simuladores (Launchpad)"><i class="fa-solid fa-shapes"></i></div>
+      <span class="app-name">Plataforma ESP32</span>
+      
+      <!-- App Switcher Segmented Pills -->
+      <div class="app-switcher-bar">
+        <button class="app-switch-btn active" id="btn-switch-city" title="Simulador Urbano 3D">
+          <i class="fa-solid fa-city"></i> <span>Cidade 3D</span>
+        </button>
+        <button class="app-switch-btn" id="btn-switch-maquete" title="Simulador Protótipo Maquete">
+          <i class="fa-solid fa-microchip"></i> <span>Maquete Física</span>
+        </button>
+      </div>
+
+      <div class="menu-items">
+        <span class="menu-item" id="menu-show-all">Janelas</span>
+        <span class="menu-item" id="menu-collapse-all">Recolher</span>
+        <span class="menu-item" id="menu-view-code">Código .ino</span>
+        <span class="menu-item" id="menu-view-wokwi">Wokwi</span>
+      </div>
+    </div>
+
+    <div class="menubar-center">
+      <div class="menubar-pill night" id="status-env-pill">
+        <div class="dot"></div>
+        <span id="status-env-text">NOITE (PWM Ativo)</span>
+      </div>
+      <div class="menubar-pill saving">
+        <div class="dot"></div>
+        <span>Economia: <strong id="status-saved-percent">70.0%</strong></span>
+      </div>
+      <div class="menubar-pill">
+        <i class="fa-regular fa-clock" style="color: var(--accent-cyan);"></i>
+        <span id="virtual-clock" style="font-family: var(--font-mono);">00:00.0</span>
+      </div>
+    </div>
+
+    <div class="menubar-right">
+      <button class="menu-btn-quick" id="btn-toggle-immersive" title="Encolher todas as janelas para ver a rua">
+        <i class="fa-solid fa-eye-slash"></i> <span>Modo Rua</span>
+      </button>
+      <button class="menu-btn-quick" id="btn-open-code">
+        <i class="fa-solid fa-code"></i> <span>Código</span>
+      </button>
+      <button class="menu-btn-quick" id="btn-open-settings">
+        <i class="fa-solid fa-sliders"></i> <span>Ajustes</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- 2. MACOS DRAGGABLE & COLLAPSIBLE WINDOWS -->
+
+  <!-- JANELA 1: SENSORES & HARDWARE -->
+  <div class="macos-window" id="win-sensors" style="top: 44px; left: 16px; width: 320px;">
+    <div class="macos-titlebar">
+      <div class="traffic-lights">
+        <button class="traffic-btn close" title="Fechar"></button>
+        <button class="traffic-btn minimize" title="Recolher / Expandir"></button>
+        <button class="traffic-btn maximize" title="Maximizar"></button>
+      </div>
+      <div class="window-title">Sensores & Postes (ESP32)</div>
+      <div class="window-actions"></div>
+    </div>
+
+    <div class="macos-body">
+      <!-- LDR -->
+      <div class="section-title">
+        <span>Sensor LDR (Claridade)</span>
+        <span id="ldr-lux-text" style="color: var(--accent-amber); font-family: var(--font-mono);">110 lux</span>
+      </div>
+
+      <div class="ldr-box">
+        <div style="display: flex; justify-content: space-between; font-size: 0.74rem; color: var(--text-muted);">
+          <span><i class="fa-solid fa-sun"></i> Leitura ADC:</span>
+          <span id="ldr-value-text" style="color: var(--accent-cyan); font-family: var(--font-mono); font-weight: 600;">450 ADC</span>
+        </div>
+        <input type="range" id="ldr-slider" class="range-slider" min="0" max="4095" value="450" step="25">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 4px;">
+          <button class="btn-cycle" id="btn-preset-day"><i class="fa-solid fa-sun" style="color: #f59e0b;"></i> Dia (0%)</button>
+          <button class="btn-cycle" id="btn-preset-dusk"><i class="fa-solid fa-cloud-sun"></i> Crepúsculo</button>
+        </div>
+        <button class="btn-cycle active" id="btn-preset-night" style="width: 100%; margin-top: 6px;"><i class="fa-solid fa-moon" style="color: #38bdf8;"></i> Noite Fechada</button>
+      </div>
+
+      <!-- PIR Sensors (1 a 6) -->
+      <div class="section-title">
+        <span>6x Sensores PIR</span>
+        <span style="color: var(--accent-emerald); font-size: 0.65rem;"><i class="fa-solid fa-stopwatch"></i> 10s Hold</span>
+      </div>
+
+      <div class="pir-grid">
+        <div class="pir-card" id="pir-card-1" title="Clique para acionar">
+          <div class="pir-header-row"><span class="pir-name">PIR 1</span><div class="pir-led-dot"></div></div>
+          <div class="pir-time-text" id="pir-time-text-1">Repouso</div>
+          <div class="pir-timer-bar"><div class="pir-timer-fill" id="pir-timer-fill-1"></div></div>
+        </div>
+
+        <div class="pir-card" id="pir-card-2" title="Clique para acionar">
+          <div class="pir-header-row"><span class="pir-name">PIR 2</span><div class="pir-led-dot"></div></div>
+          <div class="pir-time-text" id="pir-time-text-2">Repouso</div>
+          <div class="pir-timer-bar"><div class="pir-timer-fill" id="pir-timer-fill-2"></div></div>
+        </div>
+
+        <div class="pir-card" id="pir-card-3" title="Clique para acionar">
+          <div class="pir-header-row"><span class="pir-name">PIR 3</span><div class="pir-led-dot"></div></div>
+          <div class="pir-time-text" id="pir-time-text-3">Repouso</div>
+          <div class="pir-timer-bar"><div class="pir-timer-fill" id="pir-timer-fill-3"></div></div>
+        </div>
+
+        <div class="pir-card" id="pir-card-4" title="Clique para acionar">
+          <div class="pir-header-row"><span class="pir-name">PIR 4</span><div class="pir-led-dot"></div></div>
+          <div class="pir-time-text" id="pir-time-text-4">Repouso</div>
+          <div class="pir-timer-bar"><div class="pir-timer-fill" id="pir-timer-fill-4"></div></div>
+        </div>
+
+        <div class="pir-card" id="pir-card-5" title="Clique para acionar">
+          <div class="pir-header-row"><span class="pir-name">PIR 5</span><div class="pir-led-dot"></div></div>
+          <div class="pir-time-text" id="pir-time-text-5">Repouso</div>
+          <div class="pir-timer-bar"><div class="pir-timer-fill" id="pir-timer-fill-5"></div></div>
+        </div>
+
+        <div class="pir-card" id="pir-card-6" title="Clique para acionar">
+          <div class="pir-header-row"><span class="pir-name">PIR 6</span><div class="pir-led-dot"></div></div>
+          <div class="pir-time-text" id="pir-time-text-6">Repouso</div>
+          <div class="pir-timer-bar"><div class="pir-timer-fill" id="pir-timer-fill-6"></div></div>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 6px; margin-bottom: 12px;">
+        <button class="btn-cycle" id="btn-all-pirs" style="flex: 1;"><i class="fa-solid fa-bolt"></i> Ativar Todos</button>
+        <button class="btn-cycle" id="btn-clear-pirs" style="flex: 1;"><i class="fa-solid fa-rotate-left"></i> Limpar</button>
+      </div>
+
+      <!-- 6x Postes Inteligentes -->
+      <div class="section-title">
+        <span>6x Postes Inteligentes (PWM)</span>
+        <span style="color: var(--accent-cyan); font-size: 0.65rem;">0% • 30% • 60% • 100%</span>
+      </div>
+
+      <div class="poles-status-list">
+        <div class="pole-row state-30" id="pole-row-1">
+          <span>Poste 1 (GPIO 23)</span>
+          <div class="pole-meter-container">
+            <div class="pole-progress-bar"><div class="pole-progress-fill" id="pole-fill-1" style="width: 30%;"></div></div>
+            <span class="pole-val-text" id="pole-val-1">30%</span>
+          </div>
+        </div>
+
+        <div class="pole-row state-30" id="pole-row-2">
+          <span>Poste 2 (GPIO 22)</span>
+          <div class="pole-meter-container">
+            <div class="pole-progress-bar"><div class="pole-progress-fill" id="pole-fill-2" style="width: 30%;"></div></div>
+            <span class="pole-val-text" id="pole-val-2">30%</span>
+          </div>
+        </div>
+
+        <div class="pole-row state-30" id="pole-row-3">
+          <span>Poste 3 (GPIO 21)</span>
+          <div class="pole-meter-container">
+            <div class="pole-progress-bar"><div class="pole-progress-fill" id="pole-fill-3" style="width: 30%;"></div></div>
+            <span class="pole-val-text" id="pole-val-3">30%</span>
+          </div>
+        </div>
+
+        <div class="pole-row state-30" id="pole-row-4">
+          <span>Poste 4 (GPIO 19)</span>
+          <div class="pole-meter-container">
+            <div class="pole-progress-bar"><div class="pole-progress-fill" id="pole-fill-4" style="width: 30%;"></div></div>
+            <span class="pole-val-text" id="pole-val-4">30%</span>
+          </div>
+        </div>
+
+        <div class="pole-row state-30" id="pole-row-5">
+          <span>Poste 5 (GPIO 18)</span>
+          <div class="pole-meter-container">
+            <div class="pole-progress-bar"><div class="pole-progress-fill" id="pole-fill-5" style="width: 30%;"></div></div>
+            <span class="pole-val-text" id="pole-val-5">30%</span>
+          </div>
+        </div>
+
+        <div class="pole-row state-30" id="pole-row-6">
+          <span>Poste 6 (GPIO 5)</span>
+          <div class="pole-meter-container">
+            <div class="pole-progress-bar"><div class="pole-progress-fill" id="pole-fill-6" style="width: 30%;"></div></div>
+            <span class="pole-val-text" id="pole-val-6">30%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JANELA 2: TRÁFEGO & ATORES -->
+  <div class="macos-window" id="win-traffic" style="top: 44px; right: 16px; width: 230px;">
+    <div class="macos-titlebar">
+      <div class="traffic-lights">
+        <button class="traffic-btn close" title="Fechar"></button>
+        <button class="traffic-btn minimize" title="Recolher / Expandir"></button>
+        <button class="traffic-btn maximize" title="Maximizar"></button>
+      </div>
+      <div class="window-title" id="traffic-window-title">Tráfego & Atores</div>
+      <div class="window-actions"></div>
+    </div>
+
+    <div class="macos-body">
+      <!-- Seção Cidade (Avenida) -->
+      <div id="traffic-section-city">
+        <div class="section-title">
+          <span>Pedestres na Via</span>
+          <span class="badge-gpio" id="pedestrian-count-badge" style="font-size: 0.65rem;">0</span>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 7px;">
+          <button class="actor-btn accent" id="btn-spawn-pedestrian-east">
+            <span><i class="fa-solid fa-person-walking" style="color: var(--accent-cyan);"></i> + Pedestre (Ida)</span>
+            <i class="fa-solid fa-arrow-right" style="font-size: 0.7rem;"></i>
+          </button>
+
+          <button class="actor-btn accent" id="btn-spawn-pedestrian-west">
+            <span><i class="fa-solid fa-person-walking" style="color: var(--accent-purple);"></i> + Pedestre (Volta)</span>
+            <i class="fa-solid fa-arrow-left" style="font-size: 0.7rem;"></i>
+          </button>
+
+          <button class="actor-btn" id="btn-spawn-car">
+            <span><i class="fa-solid fa-car-side" style="color: var(--accent-rose);"></i> Passar Sedã</span>
+            <i class="fa-solid fa-play" style="font-size: 0.7rem;"></i>
+          </button>
+
+          <button class="btn-cycle" id="btn-clear-pedestrians" style="width: 100%; margin-top: 4px;">
+            <i class="fa-solid fa-user-xmark"></i> Limpar Pedestres
+          </button>
+        </div>
+      </div>
+
+      <!-- Seção Maquete (Mão 3D & Botões) -->
+      <div id="traffic-section-maquete" style="display: none;">
+        <div class="section-title">
+          <span>Mão 3D na Bancada</span>
+          <span style="color: var(--accent-emerald); font-size: 0.65rem;"><i class="fa-solid fa-hand-pointer"></i> Procedural</span>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 7px;">
+          <!-- Roda de Luz LDR & Mão -->
+          <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 8px; padding: 7px 8px;">
+            <div style="font-size: 0.7rem; font-weight: 600; color: #f59e0b; margin-bottom: 5px; display: flex; align-items: center; justify-content: space-between;">
+              <span><i class="fa-solid fa-rotate"></i> Roda de Luz (LDR)</span>
+              <span style="font-size: 0.62rem; color: var(--text-dim);">Trimpot 3D</span>
+            </div>
+            <button class="actor-btn accent" id="btn-hand-turn-light" style="background: rgba(245, 158, 11, 0.22); border-color: rgba(245, 158, 11, 0.45); margin-bottom: 5px; width: 100%;">
+              <span><i class="fa-solid fa-hand-holding" style="color: #f59e0b;"></i> Mão Girar Roda de Luz</span>
+              <i class="fa-solid fa-rotate" style="font-size: 0.7rem;"></i>
+            </button>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
+              <button class="btn-cycle" id="btn-hand-light-day" title="Mão gira para Dia"><i class="fa-solid fa-sun" style="color: #f59e0b;"></i> Mão → Dia</button>
+              <button class="btn-cycle" id="btn-hand-light-night" title="Mão gira para Noite"><i class="fa-solid fa-moon" style="color: #38bdf8;"></i> Mão → Noite</button>
+            </div>
+          </div>
+
+          <!-- Caminhada Sequencial -->
+          <button class="actor-btn accent" id="btn-hand-walk" style="background: rgba(16, 185, 129, 0.2); border-color: rgba(16, 185, 129, 0.4);">
+            <span><i class="fa-solid fa-person-walking-dashed-line-arrow-right" style="color: #10b981;"></i> Mão Simular P1 → P6</span>
+            <i class="fa-solid fa-play" style="font-size: 0.7rem;"></i>
+          </button>
+
+          <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">Acionar Sensor PIR com a Mão:</div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
+            <button class="btn-cycle" id="btn-hand-p1">👉 PIR 1</button>
+            <button class="btn-cycle" id="btn-hand-p2">👉 PIR 2</button>
+            <button class="btn-cycle" id="btn-hand-p3">👉 PIR 3</button>
+            <button class="btn-cycle" id="btn-hand-p4">👉 PIR 4</button>
+            <button class="btn-cycle" id="btn-hand-p5">👉 PIR 5</button>
+            <button class="btn-cycle" id="btn-hand-p6">👉 PIR 6</button>
+          </div>
+          <div style="font-size: 0.64rem; color: var(--text-dim); margin-top: 3px; line-height: 1.3;">
+            <i class="fa-solid fa-circle-info"></i> Clique diretamente nos sensores PIR ou na <strong>Roda de Luz</strong> da maquete 3D!
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JANELA 3: CÂMERAS & VISTAS -->
+  <div class="macos-window" id="win-camera" style="top: 280px; right: 16px; width: 230px;">
+    <div class="macos-titlebar">
+      <div class="traffic-lights">
+        <button class="traffic-btn close" title="Fechar"></button>
+        <button class="traffic-btn minimize" title="Recolher / Expandir"></button>
+        <button class="traffic-btn maximize" title="Maximizar"></button>
+      </div>
+      <div class="window-title">Câmera 3D</div>
+      <div class="window-actions"></div>
+    </div>
+
+    <div class="macos-body">
+      <!-- Câmeras Modo Cidade -->
+      <div id="camera-section-city" style="display: flex; flex-direction: column; gap: 6px;">
+        <button class="camera-btn active" data-preset="free">
+          <i class="fa-solid fa-arrows-up-down-left-right"></i> Câmera Livre
+        </button>
+        <button class="camera-btn" data-preset="aerial">
+          <i class="fa-solid fa-plane"></i> Vista Aérea
+        </button>
+        <button class="camera-btn" data-preset="street">
+          <i class="fa-solid fa-road"></i> Vista da Calçada
+        </button>
+        <button class="camera-btn" data-preset="pole3">
+          <i class="fa-solid fa-magnifying-glass"></i> Foco Poste 3
+        </button>
+        <div style="margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border-macos); display: flex; align-items: center; justify-content: space-between;">
+          <label for="check-pir-zones" style="font-size: 0.72rem; color: var(--text-muted); cursor: pointer;">Zonas PIR</label>
+          <input type="checkbox" id="check-pir-zones" checked style="cursor: pointer;">
+        </div>
+      </div>
+
+      <!-- Câmeras Modo Maquete -->
+      <div id="camera-section-maquete" style="display: none; flex-direction: column; gap: 6px;">
+        <button class="camera-maquete-btn active" data-preset="default">
+          <i class="fa-solid fa-table"></i> Visão Geral Bancada
+        </button>
+        <button class="camera-maquete-btn" data-preset="pirs">
+          <i class="fa-solid fa-satellite-dish" style="color: #38bdf8;"></i> 6x Sensores PIR
+        </button>
+        <button class="camera-maquete-btn" data-preset="ldr">
+          <i class="fa-solid fa-sun" style="color: #f59e0b;"></i> Módulo LDR & Roda
+        </button>
+        <button class="camera-maquete-btn" data-preset="esp32">
+          <i class="fa-solid fa-microchip" style="color: #10b981;"></i> Placa ESP32 DevKit
+        </button>
+        <button class="camera-maquete-btn" data-preset="leds">
+          <i class="fa-solid fa-microchip" style="color: #eab308;"></i> Protoboard de Resistores
+        </button>
+        <button class="camera-maquete-btn" data-preset="palitos">
+          <i class="fa-solid fa-bars" style="color: #d4a373;"></i> Postes de Palito
+        </button>
+        <button class="camera-maquete-btn" data-preset="top">
+          <i class="fa-solid fa-layer-group"></i> Vista Superior (Wokwi)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JANELA 4: EFICIÊNCIA ENERGÉTICA -->
+  <div class="macos-window" id="win-energy" style="bottom: 74px; left: 16px; width: 440px;">
+    <div class="macos-titlebar">
+      <div class="traffic-lights">
+        <button class="traffic-btn close" title="Fechar"></button>
+        <button class="traffic-btn minimize" title="Recolher / Expandir"></button>
+        <button class="traffic-btn maximize" title="Maximizar"></button>
+      </div>
+      <div class="window-title">Eficiência Energética (Telemetria)</div>
+      <div class="window-actions"></div>
+    </div>
+
+    <div class="macos-body">
+      <div class="energy-grid">
+        <div class="energy-metric-card">
+          <div class="metric-title">Convencionais</div>
+          <div class="metric-value" id="metric-conv-watts" style="color: #f59e0b;">600 W</div>
+          <div class="metric-sub">6 lâmpadas a 100%</div>
+        </div>
+
+        <div class="energy-metric-card">
+          <div class="metric-title">Inteligentes</div>
+          <div class="metric-value" id="metric-smart-watts" style="color: var(--accent-cyan);">180 W</div>
+          <div class="metric-sub">Base 30% + zonas</div>
+        </div>
+
+        <div class="energy-metric-card">
+          <div class="metric-title">Redução</div>
+          <div class="metric-value" id="metric-energy-saved" style="color: var(--accent-emerald);">70.0%</div>
+          <div class="metric-sub">Economia instantânea</div>
+        </div>
+
+        <div class="energy-metric-card">
+          <div class="metric-title">Poupado</div>
+          <div class="metric-value" id="metric-total-kwh" style="color: #a855f7;">0.000 kWh</div>
+          <div class="metric-sub">Acumulado na sessão</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JANELA 5: SERIAL MONITOR ESP32 -->
+  <div class="macos-window" id="win-serial" style="bottom: 74px; right: 16px; width: 480px;">
+    <div class="macos-titlebar">
+      <div class="traffic-lights">
+        <button class="traffic-btn close" title="Fechar"></button>
+        <button class="traffic-btn minimize" title="Recolher / Expandir"></button>
+        <button class="traffic-btn maximize" title="Maximizar"></button>
+      </div>
+      <div class="window-title">Serial Monitor ESP32 (115200 baud)</div>
+      <div class="window-actions">
+        <button class="btn-win-action" id="btn-serial-json" title="Alternar Modo JSON"><i class="fa-solid fa-code"></i></button>
+        <button class="btn-win-action" id="btn-clear-serial" title="Limpar Terminal"><i class="fa-solid fa-eraser"></i></button>
+      </div>
+    </div>
+
+    <div class="macos-body" style="padding: 8px;">
+      <div class="serial-terminal" id="serial-terminal"></div>
+    </div>
+  </div>
+
+  <!-- 3. MACOS DOCK (Iconic Bottom Dock) -->
+  <footer class="macos-dock">
+    <div class="dock-item" id="dock-btn-launchpad">
+      <i class="fa-solid fa-shapes" style="color: #ec4899;"></i>
+      <span class="dock-tooltip">Central de Simuladores</span>
+    </div>
+
+    <div class="dock-divider"></div>
+
+    <div class="dock-item active" id="dock-btn-switch-city">
+      <i class="fa-solid fa-city" style="color: #38bdf8;"></i>
+      <span class="dock-tooltip">Cidade 3D (Avenida)</span>
+    </div>
+
+    <div class="dock-item" id="dock-btn-switch-maquete">
+      <i class="fa-solid fa-microchip" style="color: #10b981;"></i>
+      <span class="dock-tooltip">Maquete Maker (ESP32)</span>
+    </div>
+
+    <div class="dock-divider"></div>
+
+    <div class="dock-item active" data-target="win-sensors">
+      <i class="fa-solid fa-satellite-dish" style="color: var(--accent-cyan);"></i>
+      <span class="dock-tooltip">Sensores & Postes</span>
+    </div>
+
+    <div class="dock-item active" data-target="win-traffic">
+      <i class="fa-solid fa-sliders" style="color: #38bdf8;"></i>
+      <span class="dock-tooltip">Tráfego & Atores</span>
+    </div>
+
+    <div class="dock-item active" data-target="win-camera">
+      <i class="fa-solid fa-video" style="color: #a855f7;"></i>
+      <span class="dock-tooltip">Câmeras 3D</span>
+    </div>
+
+    <div class="dock-item active" data-target="win-energy">
+      <i class="fa-solid fa-bolt" style="color: #f59e0b;"></i>
+      <span class="dock-tooltip">Eficiência Energética</span>
+    </div>
+
+    <div class="dock-item active" data-target="win-serial">
+      <i class="fa-solid fa-terminal" style="color: #10b981;"></i>
+      <span class="dock-tooltip">Serial Monitor</span>
+    </div>
+
+    <div class="dock-divider"></div>
+
+    <div class="dock-item" id="dock-btn-code">
+      <i class="fa-solid fa-code" style="color: #60a5fa;"></i>
+      <span class="dock-tooltip">Código ESP32 (.ino)</span>
+    </div>
+
+    <div class="dock-item" id="dock-btn-wokwi">
+      <i class="fa-solid fa-microchip" style="color: #fb923c;"></i>
+      <span class="dock-tooltip">Diagrama Wokwi</span>
+    </div>
+
+    <div class="dock-item" id="dock-btn-settings">
+      <i class="fa-solid fa-gear" style="color: #cbd5e1;"></i>
+      <span class="dock-tooltip">Parâmetros</span>
+    </div>
+
+    <div class="dock-divider"></div>
+
+    <div class="dock-item" id="dock-btn-immersive">
+      <i class="fa-solid fa-eye-slash" style="color: #38bdf8;"></i>
+      <span class="dock-tooltip">Ocultar / Recolher Todas</span>
+    </div>
+  </footer>
+
+  <!-- MODAL: LAUNCHPAD / CENTRAL DE SIMULADORES -->
+  <div class="launchpad-backdrop" id="modal-launchpad">
+    <div class="launchpad-content">
+      <div class="launchpad-header">
+        <h2><i class="fa-solid fa-shapes" style="color: var(--accent-cyan);"></i> Central de Simuladores ESP32</h2>
+        <p>Alterne entre a simulação urbana em escala real e a maquete física de bancada do protótipo com palitos.</p>
+      </div>
+
+      <div class="launchpad-grid">
+        <!-- Card 1: Cidade Inteligente -->
+        <div class="launchpad-card active" id="card-launch-city">
+          <div class="card-badge">Ativo</div>
+          <div class="card-icon" style="background: linear-gradient(135deg, #0284c7, #0369a1);">
+            <i class="fa-solid fa-city"></i>
+          </div>
+          <div class="card-title">Simulador da Cidade 3D</div>
+          <div class="card-desc">
+            Avenida urbana em escala real com 6 postes inteligentes, 6 postes convencionais, carros elétricos em movimento, pedestres animados e cones de luz realistas.
+          </div>
+          <div class="card-tags">
+            <span>Escala Urbana</span>
+            <span>Tráfego Real</span>
+            <span>ACES Filmic</span>
+          </div>
+          <button class="card-action-btn">Abrir Cidade 3D</button>
+        </div>
+
+        <!-- Card 2: Maquete Física -->
+        <div class="launchpad-card" id="card-launch-maquete">
+          <div class="card-badge">Novo</div>
+          <div class="card-icon" style="background: linear-gradient(135deg, #059669, #047857);">
+            <i class="fa-solid fa-microchip"></i>
+          </div>
+          <div class="card-title">Maquete Física & Bancada Maker</div>
+          <div class="card-desc">
+            Protótipo eletrônico na bancada de madeira com tapete de corte: placa ESP32 DevKit, protoboard, 6 postes de palitos de picolé com LEDs, sensor LDR e mão 3D procedural clicando nos botões.
+          </div>
+          <div class="card-tags">
+            <span>ESP32 DevKit</span>
+            <span>Postes de Palito</span>
+            <span>Mão 3D Animada</span>
+          </div>
+          <button class="card-action-btn">Abrir Maquete Maker</button>
+        </div>
+      </div>
+
+      <div class="launchpad-footer">
+        <span><i class="fa-solid fa-keyboard"></i> Pressione <strong>ESC</strong> ou clique fora para fechar</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 1: CÓDIGO ESP32 (.INO) -->
+  <div class="modal-backdrop" id="modal-code">
+    <div class="modal-window">
+      <div class="macos-titlebar">
+        <div class="traffic-lights">
+          <button class="traffic-btn close" id="btn-close-code"></button>
+        </div>
+        <div class="window-title">Código C++ ESP32 (iluminacao_inteligente_esp32.ino)</div>
+        <div class="window-actions"></div>
+      </div>
+      <div class="modal-body">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+          <span style="font-size: 0.8rem; color: var(--text-muted);">
+            Compatível com ESP32 Core v2.x e v3.x • Pronto para compilar no Arduino IDE ou Wokwi.
+          </span>
+          <div style="display: flex; gap: 8px;">
+            <button class="menu-btn-quick btn-primary" id="btn-copy-code">
+              <i class="fa-solid fa-copy"></i> Copiar Código Completo
+            </button>
+            <a href="iluminacao_inteligente_esp32.ino" download class="menu-btn-quick" style="text-decoration: none;">
+              <i class="fa-solid fa-download"></i> Baixar .ino
+            </a>
+          </div>
+        </div>
+        <pre class="code-view-container"><code id="arduino-code-viewer">Carregando código...</code></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: DIAGRAMA WOKWI & PINAGEM -->
+  <div class="modal-backdrop" id="modal-wokwi">
+    <div class="modal-window">
+      <div class="macos-titlebar">
+        <div class="traffic-lights">
+          <button class="traffic-btn close" id="btn-close-wokwi"></button>
+        </div>
+        <div class="window-title">Diagrama de Pinagem (Wokwi)</div>
+        <div class="window-actions"></div>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.84rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 12px;">
+          Mapeamento dos 12 LEDs (6 Postes Inteligentes + 6 Postes Convencionais), 6 PIRs e LDR:
+        </p>
+
+        <table class="pinout-table" style="width: 100%; border-collapse: collapse; font-size: 0.8rem;">
+          <thead>
+            <tr>
+              <th style="padding: 8px; border: 1px solid var(--border-macos); background: rgba(255,255,255,0.05); text-align: left;">Componente</th>
+              <th style="padding: 8px; border: 1px solid var(--border-macos); background: rgba(255,255,255,0.05); text-align: left;">GPIO ESP32</th>
+              <th style="padding: 8px; border: 1px solid var(--border-macos); background: rgba(255,255,255,0.05); text-align: left;">Tipo</th>
+              <th style="padding: 8px; border: 1px solid var(--border-macos); background: rgba(255,255,255,0.05); text-align: left;">Função</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td style="padding: 6px 8px; border: 1px solid var(--border-macos);">Sensor LDR</td><td style="padding: 6px 8px; border: 1px solid var(--border-macos);"><span class="badge-gpio">GPIO 36 (VP)</span></td><td style="padding: 6px 8px; border: 1px solid var(--border-macos);">Analógico</td><td style="padding: 6px 8px; border: 1px solid var(--border-macos);">Dia vs Noite</td></tr>
+            <tr><td style="padding: 6px 8px; border: 1px solid var(--border-macos);">PIRs 1 a 6</td><td style="padding: 6px 8px; border: 1px solid var(--border-macos);"><span class="badge-gpio">GPIOs 34, 35, 32, 33, 25, 26</span></td><td style="padding: 6px 8px; border: 1px solid var(--border-macos);">Digital In</td><td style="padding: 6px 8px; border: 1px solid var(--border-macos);">Detecção de Movimento</td></tr>
+            <tr><td style="padding: 6px 8px; border: 1px solid var(--border-macos);">Postes Inteligentes 1 a 6</td><td style="padding: 6px 8px; border: 1px solid var(--border-macos);"><span class="badge-gpio">GPIOs 23, 22, 21, 19, 18, 5</span></td><td style="padding: 6px 8px; border: 1px solid var(--border-macos);">PWM (LEDC)</td><td style="padding: 6px 8px; border: 1px solid var(--border-macos);">Dimerização 0/30/60/100%</td></tr>
+            <tr><td style="padding: 6px 8px; border: 1px solid var(--border-macos);">Postes Convencionais 1 a 6</td><td style="padding: 6px 8px; border: 1px solid var(--border-macos);"><span class="badge-gpio">GPIOs 17, 16, 4, 2, 15, 13</span></td><td style="padding: 6px 8px; border: 1px solid var(--border-macos);">Digital Out</td><td style="padding: 6px 8px; border: 1px solid var(--border-macos);">Referência (100% noite / 0% dia)</td></tr>
+          </tbody>
+        </table>
+
+        <div style="margin-top: 14px; display: flex; justify-content: flex-end;">
+          <button class="menu-btn-quick btn-primary" id="btn-copy-diagram">
+            <i class="fa-solid fa-copy"></i> Copiar diagram.json para Wokwi
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 3: AJUSTES -->
+  <div class="modal-backdrop" id="modal-settings">
+    <div class="modal-window" style="max-width: 480px;">
+      <div class="macos-titlebar">
+        <div class="traffic-lights">
+          <button class="traffic-btn close" id="btn-close-settings"></button>
+        </div>
+        <div class="window-title">Parâmetros Configuráveis</div>
+        <div class="window-actions"></div>
+      </div>
+      <div class="modal-body">
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div>
+            <label style="font-size: 0.78rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Intensidade Base (%):</label>
+            <input type="number" id="cfg-base-pwm" min="0" max="100" value="0" style="width: 100%; padding: 7px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-macos); border-radius: 6px; color: white;">
+          </div>
+          <div>
+            <label style="font-size: 0.78rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Intensidade Vizinho (%):</label>
+            <input type="number" id="cfg-neighbor-pwm" min="0" max="100" value="60" style="width: 100%; padding: 7px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-macos); border-radius: 6px; color: white;">
+          </div>
+          <div>
+            <label style="font-size: 0.78rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Intensidade Principal (%):</label>
+            <input type="number" id="cfg-main-pwm" min="0" max="100" value="100" style="width: 100%; padding: 7px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-macos); border-radius: 6px; color: white;">
+          </div>
+          <div>
+            <label style="font-size: 0.78rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Tempo de Permanência (segundos):</label>
+            <input type="number" id="cfg-hold-time" min="1" max="60" value="10" style="width: 100%; padding: 7px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-macos); border-radius: 6px; color: white;">
+          </div>
+          <div>
+            <label style="font-size: 0.78rem; color: var(--text-muted); display: block; margin-bottom: 4px;">Limiar do LDR (ADC 0-4095):</label>
+            <input type="number" id="cfg-ldr-threshold" min="100" max="4000" value="1800" style="width: 100%; padding: 7px; background: rgba(0,0,0,0.3); border: 1px solid var(--border-macos); border-radius: 6px; color: white;">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts da Aplicação com Cache Buster -->
+  <script src="js/controller.js?v=5.4"></script>
+  <script src="js/actors.js?v=5.4"></script>
+  <script src="js/scene3d.js?v=5.4"></script>
+  <script src="js/maqueteScene3d.js?v=5.4"></script>
+  <script src="js/windowManager.js?v=5.4"></script>
+  <script src="js/app.js?v=5.4"></script>
+</body>
+</html>
