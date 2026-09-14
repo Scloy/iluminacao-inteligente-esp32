@@ -4,11 +4,11 @@
 
 // Sensor LDR (Entrada Analógica - GPIO 36 / VP compatível com Wokwi e bancada)
 const int PINO_LDR = 36;
-const int LIMIAR_LDR = 1800; // Maior ou igual = DIA (claridade), Menor = NOITE (escuro)
+const int LIMIAR_LDR = 1800; // >= 1800 é DIA (luz), < 1800 é NOITE (escuro)
 
 // Resolução PWM (8 bits: 0 a 255)
 const int PWM_0   = 0;
-const int PWM_30  = 77;   // ~30% (Luz de vigília/repouso à noite)
+const int PWM_30  = 77;   // ~30% (Luz guia/repouso à noite)
 const int PWM_60  = 153;  // ~60% (Postes vizinhos)
 const int PWM_100 = 255;  // 100% (Poste com presença detectada)
 
@@ -21,18 +21,22 @@ const int postes[6] = { 23, 22, 21, 19, 18, 5 };
 // Sensores de Presença PIR (Entradas Digitais)
 const int pirs[6] = { 34, 35, 32, 33, 25, 26 };
 
-// Postes Convencionais para comparação de eficiência energética (LEDs Amarelos)
+// Postes Convencionais para comparação de consumo energético (LEDs Amarelos)
 const int postesConvencionais[6] = { 17, 16, 4, 2, 15, 13 };
 
 // Variáveis de controle de movimento e temporização
 unsigned long ultimoMovimento[6] = { 0, 0, 0, 0, 0, 0 };
 bool movimentoRegistrado[6]       = { false, false, false, false, false, false };
 
+// Nível atual de cada poste para telemetria (0%, 30%, 60% ou 100%)
+int intensidadeAtual[6] = { 0, 0, 0, 0, 0, 0 };
+
 // Temporização não-bloqueante para o Serial Monitor
 unsigned long ultimoPrintSerial = 0;
 
 // Controla a intensidade de um poste inteligente via PWM
 void controlarPoste(int poste, int intensidade) {
+  intensidadeAtual[poste] = intensidade;
   int valorPWM = PWM_0;
 
   if (intensidade == 30) {
@@ -48,7 +52,7 @@ void controlarPoste(int poste, int intensidade) {
   analogWrite(postes[poste], valorPWM);
 }
 
-// Controla os 6 postes convencionais (referência comparativa: 100% à noite, 0% de dia)
+// Controla os 6 postes convencionais (100% à noite, 0% de dia)
 void controlarPostesConvencionais(bool ligar) {
   int nivel = ligar ? HIGH : LOW;
   for (int i = 0; i < 6; i++) {
@@ -68,7 +72,7 @@ void atualizarPostes() {
     }
   }
 
-  // Todos os postes começam em 30% à noite (iluminação base)
+  // Todos os postes começam em 30% à noite (iluminação base de segurança)
   int intensidade[6] = { 30, 30, 30, 30, 30, 30 };
 
   // Verifica os movimentos que ainda estão dentro dos 10 segundos
@@ -147,33 +151,43 @@ void loop() {
   bool dia = verificarDiaNoite(valorLDR);
 
   if (dia) {
-    // Durante o dia: todos os postes ficam desligados
+    // Durante o dia: todos os postes ficam desligados (0%)
     for (int i = 0; i < 6; i++) {
       controlarPoste(i, 0);
       movimentoRegistrado[i] = false;
     }
     controlarPostesConvencionais(false);
   } else {
-    // Durante a noite: convencionais em 100% e inteligentes dinâmicos
+    // Durante a noite: convencionais em 100% e inteligentes com base 30% + dimerização
     controlarPostesConvencionais(true);
     atualizarPostes();
   }
 
-  // Telemetria no Serial a cada 500ms (evita sobrecarregar o monitor serial)
+  // Telemetria no Serial a cada 500ms
   if (millis() - ultimoPrintSerial >= 500) {
     ultimoPrintSerial = millis();
 
     Serial.print("LDR: ");
     Serial.print(valorLDR);
-    Serial.print(dia ? " | Estado: DIA (Apagados 0%)" : " | Estado: NOITE (Dimerizacao Ativa)");
+    if (dia) {
+      Serial.print(" | DIA (0%) - Cubra o LDR para simular NOITE");
+    } else {
+      Serial.print(" | NOITE (Base 30%)");
+    }
+
     Serial.print(" | PIRs: [");
     for (int i = 0; i < 6; i++) {
       Serial.print(digitalRead(pirs[i]));
       if (i < 5) Serial.print(" ");
     }
+    Serial.print("] | Postes: [");
+    for (int i = 0; i < 6; i++) {
+      Serial.print(intensidadeAtual[i]);
+      Serial.print("%");
+      if (i < 5) Serial.print(" ");
+    }
     Serial.println("]");
   }
 
-  // Pequena pausa para estabilidade do loop
   delay(20);
 }

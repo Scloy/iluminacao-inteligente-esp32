@@ -9,7 +9,7 @@
 class ESP32LightingController {
   constructor() {
     // Parâmetros de Configuração (Itens 4 e 8 do Roteiro)
-    this.intensityBase = 0;          // 0% - Postes apagados sem movimento (acendem dinamicamente ao apertar!)
+    this.intensityBase = 30;         // 30% - Base de repouso à noite (luz guia de segurança)
     this.intensityNeighbor = 60;     // 60%
     this.intensityMain = 100;        // 100%
     this.intensityOff = 0;           // 0%
@@ -28,10 +28,10 @@ class ESP32LightingController {
     // Temporizadores de cada sensor (estilo millis)
     this.lastMovementMs = [0, 0, 0, 0, 0, 0];
 
-    // Saídas de Iluminação (0% a 100%) - Apagados no estado de repouso (sem apertar)
-    this.smartPolesPWM = [0, 0, 0, 0, 0, 0];       // 6 Postes Inteligentes
-    this.conventionalPolesPWM = 0;                 // 6 Postes Convencionais (apagados por padrão, ativáveis para comparar)
-    this.enableConventionalComparison = false;
+    // Saídas de Iluminação (0% a 100%) - Inicia em 30% no repouso noturno
+    this.smartPolesPWM = [30, 30, 30, 30, 30, 30];       // 6 Postes Inteligentes
+    this.conventionalPolesPWM = 100;                     // 6 Postes Convencionais (100% à noite)
+    this.enableConventionalComparison = true;
 
     // Telemetria e Serial
     this.virtualMillis = 0;
