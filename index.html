@@ -13,7 +13,7 @@
   <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-  <link rel="stylesheet" href="styles.css?v=4.0">
+  <link rel="stylesheet" href="styles.css?v=4.1">
 
   <!-- Three.js & OrbitControls -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -372,42 +372,154 @@
     </div>
   </div>
 
-  <!-- JANELA 4: EFICIÊNCIA ENERGÉTICA -->
-  <div class="macos-window" id="win-energy" style="bottom: 74px; left: 16px; width: 440px;">
+  <!-- JANELA 4: DASHBOARD DE ENERGIA & ECONOMIA -->
+  <div class="macos-window" id="win-energy" style="bottom: 74px; left: 16px; width: 600px;">
     <div class="macos-titlebar">
       <div class="traffic-lights">
         <button class="traffic-btn close" title="Fechar"></button>
         <button class="traffic-btn minimize" title="Recolher / Expandir"></button>
         <button class="traffic-btn maximize" title="Maximizar"></button>
       </div>
-      <div class="window-title">Eficiência Energética (Telemetria)</div>
-      <div class="window-actions"></div>
+      <div class="window-title">Dashboard de Energia &amp; Economia</div>
+      <div class="window-actions">
+        <button class="btn-win-action" id="btn-energy-reset" title="Zerar medições da sessão"><i class="fa-solid fa-rotate-left"></i></button>
+      </div>
     </div>
 
-    <div class="macos-body">
-      <div class="energy-grid">
-        <div class="energy-metric-card">
-          <div class="metric-title">Convencionais</div>
-          <div class="metric-value" id="metric-conv-watts" style="color: #f59e0b;">600 W</div>
-          <div class="metric-sub">6 lâmpadas a 100%</div>
+    <div class="macos-body energy-dash">
+      <!-- Abas -->
+      <div class="ed-tabs">
+        <button class="ed-tab active" data-tab="overview"><i class="fa-solid fa-gauge-high"></i> Visão Geral</button>
+        <button class="ed-tab" data-tab="poles"><i class="fa-solid fa-lightbulb"></i> Por Poste</button>
+        <button class="ed-tab" data-tab="projection"><i class="fa-solid fa-chart-line"></i> Projeções</button>
+        <span class="ed-live"><span class="ed-live-dot"></span> AO VIVO</span>
+      </div>
+
+      <!-- ABA 1: VISÃO GERAL -->
+      <div class="ed-panel active" data-panel="overview">
+        <div class="ed-kpis">
+          <div class="ed-kpi kpi-power">
+            <div class="ed-kpi-head"><i class="fa-solid fa-plug"></i> Potência agora</div>
+            <div class="ed-kpi-value" id="ed-power-smart">180 W</div>
+            <div class="ed-kpi-sub">vs <span id="ed-power-conv">600 W</span> convencional</div>
+          </div>
+          <div class="ed-kpi kpi-used">
+            <div class="ed-kpi-head"><i class="fa-solid fa-bolt"></i> Energia gasta</div>
+            <div class="ed-kpi-value" id="ed-energy-smart">0.00 Wh</div>
+            <div class="ed-kpi-sub">Convenc.: <span id="ed-energy-conv">0.00 Wh</span></div>
+          </div>
+          <div class="ed-kpi kpi-saved">
+            <div class="ed-kpi-head"><i class="fa-solid fa-leaf"></i> Energia poupada</div>
+            <div class="ed-kpi-value" id="ed-energy-saved">0.00 Wh</div>
+            <div class="ed-kpi-sub"><span id="ed-co2-saved">0 g</span> de CO₂ evitado</div>
+          </div>
+          <div class="ed-kpi kpi-money">
+            <div class="ed-kpi-head"><i class="fa-solid fa-sack-dollar"></i> Custo evitado</div>
+            <div class="ed-kpi-value" id="ed-money-saved">R$ 0,00</div>
+            <div class="ed-kpi-sub">Tarifa <span id="ed-tariff-label">R$ 0,39</span>/kWh</div>
+          </div>
         </div>
 
-        <div class="energy-metric-card">
-          <div class="metric-title">Inteligentes</div>
-          <div class="metric-value" id="metric-smart-watts" style="color: var(--accent-cyan);">180 W</div>
-          <div class="metric-sub">Base 30% + zonas</div>
+        <div class="ed-main-row">
+          <div class="ed-card ed-chart-card">
+            <div class="ed-card-head">
+              <span>Potência em tempo real</span>
+              <span class="ed-legend">
+                <i style="background:#f59e0b"></i>Convencional
+                <i style="background:#06b6d4"></i>Inteligente
+                <i style="background:rgba(16,185,129,.6)"></i>Economia
+              </span>
+            </div>
+            <canvas id="ed-power-chart"></canvas>
+          </div>
+
+          <div class="ed-card ed-gauge-card">
+            <div class="ed-card-head"><span>Economia</span></div>
+            <div class="ed-gauge">
+              <svg viewBox="0 0 100 100">
+                <circle class="ed-gauge-track" cx="50" cy="50" r="40"></circle>
+                <circle class="ed-gauge-fill" id="ed-gauge-fill" cx="50" cy="50" r="40"></circle>
+              </svg>
+              <div class="ed-gauge-center">
+                <span id="ed-gauge-value">70%</span>
+                <small>instantânea</small>
+              </div>
+            </div>
+            <div class="ed-gauge-stats">
+              <div><span>Média sessão</span><strong id="ed-session-percent">--</strong></div>
+              <div><span>Tempo noturno</span><strong id="ed-night-time">00:00</strong></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ABA 2: POR POSTE -->
+      <div class="ed-panel" data-panel="poles">
+        <div class="ed-card">
+          <div class="ed-card-head">
+            <span>Tempo noturno em cada nível de PWM</span>
+            <span class="ed-legend" id="ed-level-legend"></span>
+          </div>
+          <div class="ed-pole-header">
+            <span></span><span>Distribuição</span><span>Gasto</span><span>Economia</span>
+          </div>
+          <div class="ed-pole-list" id="ed-pole-list"></div>
         </div>
 
-        <div class="energy-metric-card">
-          <div class="metric-title">Redução</div>
-          <div class="metric-value" id="metric-energy-saved" style="color: var(--accent-emerald);">70.0%</div>
-          <div class="metric-sub">Economia instantânea</div>
+        <div class="ed-card ed-compare">
+          <div class="ed-card-head"><span>Comparativo acumulado da sessão (6 postes)</span></div>
+          <div class="ed-compare-row">
+            <span>Convencional</span>
+            <div class="ed-compare-bar"><div class="fill conv" id="ed-cmp-conv"></div></div>
+            <strong id="ed-cmp-conv-val">0.00 Wh</strong>
+          </div>
+          <div class="ed-compare-row">
+            <span>Inteligente</span>
+            <div class="ed-compare-bar"><div class="fill smart" id="ed-cmp-smart"></div></div>
+            <strong id="ed-cmp-smart-val">0.00 Wh</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- ABA 3: PROJEÇÕES -->
+      <div class="ed-panel" data-panel="projection">
+        <div class="ed-params">
+          <label>Lâmpada LED (W)<input type="number" id="ed-param-watts" min="1" value="60"></label>
+          <label>Tarifa (R$/kWh)<input type="number" id="ed-param-tariff" min="0" step="0.01" value="0.39"></label>
+          <label>Horas / noite<input type="number" id="ed-param-hours" min="1" max="24" value="12"></label>
+          <label>Postes na cidade<input type="number" id="ed-param-city" min="1" step="100" value="10000"></label>
+          <label>kg CO₂ / kWh<input type="number" id="ed-param-co2" min="0" step="0.001" value="0.0545"></label>
         </div>
 
-        <div class="energy-metric-card">
-          <div class="metric-title">Poupado</div>
-          <div class="metric-value" id="metric-total-kwh" style="color: #a855f7;">0.000 kWh</div>
-          <div class="metric-sub">Acumulado na sessão</div>
+        <div class="ed-proj-basis">
+          <i class="fa-solid fa-location-dot"></i>
+          Referência: <strong style="color: var(--text-main); font-family: var(--font-system);">São Sebastião do Paraíso – MG</strong>
+          · Cemig B4a (bandeira verde + PIS/COFINS) · LED 60 W · fator SIN 2024 (MCTI) · ~71 mil hab.
+        </div>
+
+        <div class="ed-proj-basis">
+          <i class="fa-solid fa-circle-info"></i>
+          Projeção baseada na economia média de <strong id="ed-proj-ratio">70%</strong> observada nesta sessão
+          (convencional = 100% a noite inteira).
+        </div>
+
+        <table class="ed-proj-table">
+          <thead>
+            <tr><th>Escopo</th><th>Convencional</th><th>Inteligente</th><th>Poupado</th><th>Economia</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>6 postes / noite</td><td id="ed-proj-night-conv">-</td><td id="ed-proj-night-smart">-</td><td class="saved" id="ed-proj-night-saved">-</td><td class="money" id="ed-proj-night-money">-</td></tr>
+            <tr><td>6 postes / mês</td><td id="ed-proj-month-conv">-</td><td id="ed-proj-month-smart">-</td><td class="saved" id="ed-proj-month-saved">-</td><td class="money" id="ed-proj-month-money">-</td></tr>
+            <tr><td>6 postes / ano</td><td id="ed-proj-year-conv">-</td><td id="ed-proj-year-smart">-</td><td class="saved" id="ed-proj-year-saved">-</td><td class="money" id="ed-proj-year-money">-</td></tr>
+            <tr class="highlight"><td id="ed-proj-city-label">Cidade / ano</td><td id="ed-proj-city-conv">-</td><td id="ed-proj-city-smart">-</td><td class="saved" id="ed-proj-city-saved">-</td><td class="money" id="ed-proj-city-money">-</td></tr>
+          </tbody>
+        </table>
+
+        <div class="ed-equiv">
+          <div class="ed-equiv-card"><i class="fa-solid fa-house" style="color:#38bdf8"></i><strong id="ed-eq-homes">0</strong><span>casas abastecidas por 1 ano</span></div>
+          <div class="ed-equiv-card"><i class="fa-solid fa-smog" style="color:#94a3b8"></i><strong id="ed-eq-co2">0 kg</strong><span>CO₂ evitado / ano</span></div>
+          <div class="ed-equiv-card"><i class="fa-solid fa-tree" style="color:#10b981"></i><strong id="ed-eq-trees">0</strong><span>árvores equivalentes</span></div>
+          <div class="ed-equiv-card"><i class="fa-solid fa-coins" style="color:#f59e0b"></i><strong id="ed-eq-money">R$ 0</strong><span>economizados / ano</span></div>
         </div>
       </div>
     </div>
@@ -471,7 +583,7 @@
 
     <div class="dock-item active" data-target="win-energy">
       <i class="fa-solid fa-bolt" style="color: #f59e0b;"></i>
-      <span class="dock-tooltip">Eficiência Energética</span>
+      <span class="dock-tooltip">Dashboard de Energia</span>
     </div>
 
     <div class="dock-item active" data-target="win-serial">
@@ -664,11 +776,12 @@
   </div>
 
   <!-- Scripts da Aplicação com Cache Buster -->
-  <script src="js/controller.js?v=5.4"></script>
+  <script src="js/controller.js?v=5.5"></script>
   <script src="js/actors.js?v=5.4"></script>
   <script src="js/scene3d.js?v=5.4"></script>
   <script src="js/maqueteScene3d.js?v=5.4"></script>
   <script src="js/windowManager.js?v=5.4"></script>
-  <script src="js/app.js?v=5.4"></script>
+  <script src="js/energyDashboard.js?v=1.1"></script>
+  <script src="js/app.js?v=5.5"></script>
 </body>
 </html>

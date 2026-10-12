@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const streetScene = new SmartStreetScene('webgl-container', controller);
   const maqueteScene = new MaquetePhysicalScene('webgl-maquete-container', controller);
   const windowManager = new MacOSWindowManager();
+  const energyDashboard = new EnergyDashboard(controller);
 
   let currentApp = 'city'; // 'city' | 'maquete'
 
@@ -472,6 +473,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 15. Loop Principal de Animação e Renderização
   let lastTime = performance.now();
+  let lastDelta = 0;
 
   function animate() {
     requestAnimationFrame(animate);
@@ -479,6 +481,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const currentTime = performance.now();
     const delta = Math.min((currentTime - lastTime) / 1000, 0.1);
     lastTime = currentTime;
+    lastDelta = delta;
 
     // Atualiza lógica central do ESP32 (compartilhada entre ambos os simuladores)
     controller.update(delta);
@@ -577,21 +580,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    // Atualizar Métricas Energéticas
-    const convWatts = (ctrl.conventionalPolesPWM / 100) * 600;
-    const smartWatts = ctrl.smartPolesPWM.reduce((acc, p) => acc + (p / 100) * 100, 0);
-    const kwhConv = (ctrl.totalConvEnergyJoules / 3600000);
-    const kwhSmart = (ctrl.totalSmartEnergyJoules / 3600000);
-
-    const mConvWatts = document.getElementById('metric-conv-watts');
-    const mSmartWatts = document.getElementById('metric-smart-watts');
-    const mSaved = document.getElementById('metric-energy-saved');
-    const mKwh = document.getElementById('metric-total-kwh');
-
-    if (mConvWatts) mConvWatts.innerText = `${Math.round(convWatts)} W`;
-    if (mSmartWatts) mSmartWatts.innerText = `${Math.round(smartWatts)} W`;
-    if (mSaved) mSaved.innerText = `${ctrl.savedPercent.toFixed(1)}%`;
-    if (mKwh) mKwh.innerText = `${Math.max(0, kwhConv - kwhSmart).toFixed(3)} kWh`;
+    // Atualizar Dashboard de Energia & Economia
+    energyDashboard.update(lastDelta);
 
     // Atualizar Terminal Serial
     if (serialTerminal && ctrl.serialLogs.length > 0) {

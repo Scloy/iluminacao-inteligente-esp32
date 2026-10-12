@@ -42,7 +42,7 @@ class ESP32LightingController {
     this.jsonMode = false;
 
     // Métricas de Consumo Energético
-    this.powerNominalWattsPerPole = 100;
+    this.powerNominalWattsPerPole = 60;  // Luminária LED 60 W (padrão da modernização de IP em São Sebastião do Paraíso - MG)
     this.totalSmartEnergyJoules = 0;
     this.totalConvEnergyJoules = 0;
     this.savedPercent = 100;
