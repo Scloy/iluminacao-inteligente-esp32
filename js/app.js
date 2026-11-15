@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const windowManager = new MacOSWindowManager();
   const energyDashboard = new EnergyDashboard(controller);
 
-  let currentApp = 'city'; // 'city' | 'maquete'
+  let currentApp = 'city'; // Inicializado abaixo para Maquete 3D Acadêmica por padrão
 
   // 2. Sistema de Troca de Simuladores (Plataforma Hub)
   function switchApp(appId) {
@@ -362,7 +362,55 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 10. Ações Maquete: Mão 3D na Bancada (Botões e Roda de Luz)
+  // 10. Ações Maquete: 3 Situações Demonstrativas, Caixa Transparente Removível e Mão 3D
+  const btnDemoDay = document.getElementById('btn-maquete-demo-day');
+  const btnDemoNight = document.getElementById('btn-maquete-demo-night');
+  const btnDemoMotion = document.getElementById('btn-maquete-demo-motion');
+
+  if (btnDemoDay) {
+    btnDemoDay.addEventListener('click', () => {
+      maqueteScene.setDemonstrationState('day');
+      updateCycleButtons(btnDay);
+    });
+  }
+
+  if (btnDemoNight) {
+    btnDemoNight.addEventListener('click', () => {
+      maqueteScene.setDemonstrationState('night');
+      updateCycleButtons(btnNight);
+    });
+  }
+
+  if (btnDemoMotion) {
+    btnDemoMotion.addEventListener('click', () => {
+      maqueteScene.setDemonstrationState('motion');
+      maqueteScene.triggerMiniCarPass();
+      updateCycleButtons(btnNight);
+    });
+  }
+
+  const btnToggleAcrylic = document.getElementById('btn-toggle-acrylic-cover');
+  const acrylicCoverText = document.getElementById('acrylic-cover-text');
+
+  function updateAcrylicButtonLabel(isOpen) {
+    if (acrylicCoverText) {
+      acrylicCoverText.innerText = isOpen
+        ? 'Fechar Caixa Transparente'
+        : 'Remover Caixa Transparente';
+    }
+  }
+
+  if (btnToggleAcrylic) {
+    btnToggleAcrylic.addEventListener('click', () => {
+      const opened = maqueteScene.toggleAcrylicCover();
+      updateAcrylicButtonLabel(opened);
+    });
+  }
+
+  window.addEventListener('acrylicCoverToggled', (e) => {
+    updateAcrylicButtonLabel(Boolean(e.detail && e.detail.open));
+  });
+
   const btnHandTurnLight = document.getElementById('btn-hand-turn-light');
   if (btnHandTurnLight) {
     btnHandTurnLight.addEventListener('click', () => {
@@ -617,6 +665,9 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
+
+  // Inicia diretamente na Maquete 3D Acadêmica completa (com alternância livre para Cidade 3D)
+  switchApp('maquete');
 
   animate();
 });

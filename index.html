@@ -265,22 +265,45 @@
         </div>
       </div>
 
-      <!-- Seção Maquete (Mão 3D & Botões) -->
+      <!-- Seção Maquete (Protótipo Acadêmico MDF + Arduino Nano + Sensores IR) -->
       <div id="traffic-section-maquete" style="display: none;">
         <div class="section-title">
-          <span>Mão 3D na Bancada</span>
-          <span style="color: var(--accent-emerald); font-size: 0.65rem;"><i class="fa-solid fa-hand-pointer"></i> Procedural</span>
+          <span>3 Estados Demonstrativos</span>
+          <span style="color: var(--accent-cyan); font-size: 0.65rem;"><i class="fa-solid fa-flask"></i> Exposição</span>
         </div>
+
+        <div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px;">
+          <button class="actor-btn" id="btn-maquete-demo-day" style="background: rgba(245, 158, 11, 0.14); border-color: rgba(245, 158, 11, 0.4);">
+            <span><i class="fa-solid fa-sun" style="color: #f59e0b;"></i> 1. Durante o Dia (0%)</span>
+            <span style="font-size: 0.65rem; color: var(--text-muted);">OFF</span>
+          </button>
+
+          <button class="actor-btn" id="btn-maquete-demo-night" style="background: rgba(56, 189, 248, 0.14); border-color: rgba(56, 189, 248, 0.4);">
+            <span><i class="fa-solid fa-moon" style="color: #38bdf8;"></i> 2. Durante a Noite (30%)</span>
+            <span style="font-size: 0.65rem; color: var(--text-muted);">AUTO</span>
+          </button>
+
+          <button class="actor-btn accent" id="btn-maquete-demo-motion" style="background: rgba(16, 185, 129, 0.22); border-color: rgba(16, 185, 129, 0.5);">
+            <span><i class="fa-solid fa-car-On" style="color: #10b981;"></i> 3. Detecção Movimento (100%)</span>
+            <i class="fa-solid fa-bolt" style="color: #facc15; font-size: 0.7rem;"></i>
+          </button>
+        </div>
+
+        <!-- Caixa Transparente Removível da Área Técnica -->
+        <button class="actor-btn" id="btn-toggle-acrylic-cover" style="margin-bottom: 8px; width: 100%; background: rgba(14, 165, 233, 0.14); border-color: rgba(56, 189, 248, 0.4);">
+          <span><i class="fa-solid fa-box-open" style="color: #38bdf8;"></i> <span id="acrylic-cover-text">Remover Caixa Transparente</span></span>
+          <i class="fa-solid fa-up-down" style="font-size: 0.7rem;"></i>
+        </button>
 
         <div style="display: flex; flex-direction: column; gap: 7px;">
           <!-- Roda de Luz LDR & Mão -->
           <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 8px; padding: 7px 8px;">
             <div style="font-size: 0.7rem; font-weight: 600; color: #f59e0b; margin-bottom: 5px; display: flex; align-items: center; justify-content: space-between;">
-              <span><i class="fa-solid fa-rotate"></i> Roda de Luz (LDR)</span>
+              <span><i class="fa-solid fa-rotate"></i> Sensor LDR (Luminosidade)</span>
               <span style="font-size: 0.62rem; color: var(--text-dim);">Trimpot 3D</span>
             </div>
             <button class="actor-btn accent" id="btn-hand-turn-light" style="background: rgba(245, 158, 11, 0.22); border-color: rgba(245, 158, 11, 0.45); margin-bottom: 5px; width: 100%;">
-              <span><i class="fa-solid fa-hand-holding" style="color: #f59e0b;"></i> Mão Girar Roda de Luz</span>
+              <span><i class="fa-solid fa-hand-holding" style="color: #f59e0b;"></i> Mão Girar Roda LDR</span>
               <i class="fa-solid fa-rotate" style="font-size: 0.7rem;"></i>
             </button>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
@@ -291,21 +314,21 @@
 
           <!-- Caminhada Sequencial -->
           <button class="actor-btn accent" id="btn-hand-walk" style="background: rgba(16, 185, 129, 0.2); border-color: rgba(16, 185, 129, 0.4);">
-            <span><i class="fa-solid fa-person-walking-dashed-line-arrow-right" style="color: #10b981;"></i> Mão Simular P1 → P6</span>
+            <span><i class="fa-solid fa-person-walking-dashed-line-arrow-right" style="color: #10b981;"></i> Simular Passagem IR 1 → 6</span>
             <i class="fa-solid fa-play" style="font-size: 0.7rem;"></i>
           </button>
 
-          <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">Acionar Sensor PIR com a Mão:</div>
+          <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">Acionar Sensor Infravermelho (IR):</div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
-            <button class="btn-cycle" id="btn-hand-p1">👉 PIR 1</button>
-            <button class="btn-cycle" id="btn-hand-p2">👉 PIR 2</button>
-            <button class="btn-cycle" id="btn-hand-p3">👉 PIR 3</button>
-            <button class="btn-cycle" id="btn-hand-p4">👉 PIR 4</button>
-            <button class="btn-cycle" id="btn-hand-p5">👉 PIR 5</button>
-            <button class="btn-cycle" id="btn-hand-p6">👉 PIR 6</button>
+            <button class="btn-cycle" id="btn-hand-p1">👉 IR 1</button>
+            <button class="btn-cycle" id="btn-hand-p2">👉 IR 2</button>
+            <button class="btn-cycle" id="btn-hand-p3">👉 IR 3</button>
+            <button class="btn-cycle" id="btn-hand-p4">👉 IR 4</button>
+            <button class="btn-cycle" id="btn-hand-p5">👉 IR 5</button>
+            <button class="btn-cycle" id="btn-hand-p6">👉 IR 6</button>
           </div>
           <div style="font-size: 0.64rem; color: var(--text-dim); margin-top: 3px; line-height: 1.3;">
-            <i class="fa-solid fa-circle-info"></i> Clique diretamente nos sensores PIR ou na <strong>Roda de Luz</strong> da maquete 3D!
+            <i class="fa-solid fa-circle-info"></i> Clique na <strong>caixa transparente</strong> para abrir a área técnica ou nos sensores IR!
           </div>
         </div>
       </div>
@@ -348,25 +371,25 @@
       <!-- Câmeras Modo Maquete -->
       <div id="camera-section-maquete" style="display: none; flex-direction: column; gap: 6px;">
         <button class="camera-maquete-btn active" data-preset="default">
-          <i class="fa-solid fa-table"></i> Visão Geral Bancada
-        </button>
-        <button class="camera-maquete-btn" data-preset="pirs">
-          <i class="fa-solid fa-satellite-dish" style="color: #38bdf8;"></i> 6x Sensores PIR
-        </button>
-        <button class="camera-maquete-btn" data-preset="ldr">
-          <i class="fa-solid fa-sun" style="color: #f59e0b;"></i> Módulo LDR & Roda
+          <i class="fa-solid fa-cube"></i> Vista Isométrica (Estúdio)
         </button>
         <button class="camera-maquete-btn" data-preset="esp32">
-          <i class="fa-solid fa-microchip" style="color: #10b981;"></i> Placa ESP32 DevKit
+          <i class="fa-solid fa-microchip" style="color: #10b981;"></i> Arduino Nano & Área Técnica
+        </button>
+        <button class="camera-maquete-btn" data-preset="pirs">
+          <i class="fa-solid fa-satellite-dish" style="color: #38bdf8;"></i> Sensores IR & Rua Asfaltada
+        </button>
+        <button class="camera-maquete-btn" data-preset="ldr">
+          <i class="fa-solid fa-sun" style="color: #f59e0b;"></i> Sensor LDR & Trimpot
         </button>
         <button class="camera-maquete-btn" data-preset="leds">
-          <i class="fa-solid fa-microchip" style="color: #eab308;"></i> Protoboard de Resistores
+          <i class="fa-solid fa-plug-circle-bolt" style="color: #eab308;"></i> Fonte & Protoboard LEDs
         </button>
         <button class="camera-maquete-btn" data-preset="palitos">
-          <i class="fa-solid fa-bars" style="color: #d4a373;"></i> Postes de Palito
+          <i class="fa-solid fa-lightbulb" style="color: #f8fafc;"></i> Postes em PVC & Edifícios
         </button>
         <button class="camera-maquete-btn" data-preset="top">
-          <i class="fa-solid fa-layer-group"></i> Vista Superior (Wokwi)
+          <i class="fa-solid fa-layer-group"></i> Vista Planta Superior
         </button>
       </div>
     </div>
@@ -645,20 +668,20 @@
 
         <!-- Card 2: Maquete Física -->
         <div class="launchpad-card" id="card-launch-maquete">
-          <div class="card-badge">Novo</div>
+          <div class="card-badge">Exposição 3D</div>
           <div class="card-icon" style="background: linear-gradient(135deg, #059669, #047857);">
             <i class="fa-solid fa-microchip"></i>
           </div>
-          <div class="card-title">Maquete Física & Bancada Maker</div>
+          <div class="card-title">Maquete 3D Acadêmica (MDF &amp; PVC)</div>
           <div class="card-desc">
-            Protótipo eletrônico na bancada de madeira com tapete de corte: placa ESP32 DevKit, protoboard, 6 postes de palitos de picolé com LEDs, sensor LDR e mão 3D procedural clicando nos botões.
+            Protótipo físico universitário de Rua Inteligente em base de MDF com casas em escala, rua asfaltada, postes em PVC com LEDs brancos, sensores LDR e IR, Arduino Nano na protoboard, fonte de alimentação e caixa de acrílico transparente removível.
           </div>
           <div class="card-tags">
-            <span>ESP32 DevKit</span>
-            <span>Postes de Palito</span>
-            <span>Mão 3D Animada</span>
+            <span>Base em MDF</span>
+            <span>Arduino Nano + IR</span>
+            <span>Caixa Acrílico Removível</span>
           </div>
-          <button class="card-action-btn">Abrir Maquete Maker</button>
+          <button class="card-action-btn">Abrir Maquete 3D</button>
         </div>
       </div>
 
@@ -776,12 +799,12 @@
   </div>
 
   <!-- Scripts da Aplicação com Cache Buster -->
-  <script src="js/controller.js?v=5.5"></script>
-  <script src="js/actors.js?v=5.4"></script>
-  <script src="js/scene3d.js?v=5.4"></script>
-  <script src="js/maqueteScene3d.js?v=5.4"></script>
-  <script src="js/windowManager.js?v=5.4"></script>
-  <script src="js/energyDashboard.js?v=1.1"></script>
-  <script src="js/app.js?v=5.5"></script>
+  <script src="js/controller.js?v=6.0"></script>
+  <script src="js/actors.js?v=6.0"></script>
+  <script src="js/scene3d.js?v=6.0"></script>
+  <script src="js/maqueteScene3d.js?v=6.0"></script>
+  <script src="js/windowManager.js?v=6.0"></script>
+  <script src="js/energyDashboard.js?v=6.0"></script>
+  <script src="js/app.js?v=6.0"></script>
 </body>
 </html>
