@@ -341,30 +341,32 @@ class MaquetePhysicalScene {
   }
 
   /**
-   * 1B. PROTOBOARD NO MEIO SERVINDO DE RUA IMPROVISADA (Estilo Protótipo Universitário Maker)
-   * Em vez de asfalto tradicional, uma longa Protoboard de bancada ocupa o centro da maquete (Z = -1.6),
-   * fazendo o papel de rua de duas mãos de forma criativa/improvisada:
-   * - O sulco divisor central da protoboard (DIP ravine) com fitas amarelas tracejadas divide as duas mãos da via!
-   * - Os furos (tie-points) de matriz da protoboard formam a textura da pista onde os carrinhos trafegam.
+   * 1B. PROTOBOARD DA DIREITA (FUMÊ) NO MEIO SERVINDO DE RUA IMPROVISADA (Estilo Protótipo Universitário Maker)
+   * A Protoboard Direita de Resistores (Fumê 830 pontos) foi posicionada no centro da maquete (Z = -1.6),
+   * fazendo o papel de rua de duas mãos de forma criativa e improvisada:
+   * - Corpo translúcido fumê escuro característico da protoboard da direita, parecendo o pavimento da via!
+   * - O sulco divisor central da protoboard (canaleta DIP) com fitas amarelas tracejadas divide as duas mãos da rua!
+   * - Os furos metálicos (tie-points) da matriz da protoboard formam a textura das duas pistas onde os veículos trafegam.
    * - Os barramentos laterais (+ vermelho e - azul) funcionam como acostamento/guias energizadas.
-   * - Nas extremidades, tiras de papel/fita branca coladas sobre os furos formam as faixas de pedestres improvisadas.
-   * - Os resistores de 220Ω e jumpers dos 6 postes/sensores ficam espetados diretamente nas bordas da "Protoboard-Rua"!
+   * - Nas extremidades, tirinhas de fita branca coladas sobre os furos formam as faixas de pedestres improvisadas.
+   * - Os 12 resistores de 220Ω (6 inteligentes + 6 convencionais), LEDs indicadores e jumpers dos postes ficam espetados
+   *   diretamente nas bordas dessa Protoboard-Rua!
    */
   buildSmartStreetAndSidewalks() {
     this.streetGroup = new THREE.Group();
 
-    // Textura de alta resolução da Protoboard Gigante fazendo papel de Rua Improvisada
+    // Textura de alta resolução da Protoboard da Direita (Fumê Escura) fazendo papel de Rua Improvisada no meio
     const roadCanvas = document.createElement('canvas');
     roadCanvas.width = 2048;
     roadCanvas.height = 512;
     const rctx = roadCanvas.getContext('2d');
 
-    // Corpo de plástico ABS branco/creme clássico de Protoboard
-    rctx.fillStyle = '#f1f5f9';
+    // Corpo em policarbonato fumê escuro (característico da Protoboard da Direita, lembrando asfalto tecnológico)
+    rctx.fillStyle = '#27272a';
     rctx.fillRect(0, 0, 2048, 512);
 
-    // Sombras das divisórias modulares (3 protoboards de 830 pontos encaixadas lado a lado formando a rua)
-    rctx.strokeStyle = '#cbd5e1';
+    // Divisórias modulares (protoboards fumê encaixadas em sequência formando a rua)
+    rctx.strokeStyle = '#3f3f46';
     rctx.lineWidth = 5;
     [682, 1365].forEach(seamX => {
       rctx.beginPath();
@@ -373,48 +375,48 @@ class MaquetePhysicalScene {
       rctx.stroke();
     });
 
-    // Barramentos de alimentação superior e inferior (Power Rails: Linha Vermelha VCC + e Linha Azul GND -)
+    // Barramentos de alimentação superior e inferior (Power Rails da Protoboard: Linha Vermelha VCC + e Linha Azul GND -)
     rctx.fillStyle = '#ef4444';
     rctx.fillRect(24, 18, 2000, 6);
     rctx.fillRect(24, 462, 2000, 6);
 
-    rctx.fillStyle = '#2563eb';
+    rctx.fillStyle = '#3b82f6';
     rctx.fillRect(24, 48, 2000, 6);
     rctx.fillRect(24, 492, 2000, 6);
 
-    // Sulco central da protoboard (canaleta DIP no meio da pista, Y = 236 a 276)
-    rctx.fillStyle = '#cbd5e1';
+    // Sulco central da protoboard (canaleta DIP no meio da pista, Y = 234 a 278)
+    rctx.fillStyle = '#18181b';
     rctx.fillRect(0, 234, 2048, 44);
-    rctx.fillStyle = '#94a3b8';
-    rctx.fillRect(0, 240, 2048, 4);
-    rctx.fillRect(0, 268, 2048, 4);
+    rctx.fillStyle = '#3f3f46';
+    rctx.fillRect(0, 238, 2048, 3);
+    rctx.fillRect(0, 271, 2048, 3);
 
-    // Furos metálicos (tie-points) da protoboard ao longo de toda a "rua"
+    // Furos metálicos (tie-points) da protoboard ao longo de toda a "Protoboard-Rua"
     for (let x = 36; x <= 2012; x += 18) {
       // Furos dos barramentos de alimentação (agrupados de 5 em 5)
       if (Math.floor((x - 36) / 18) % 6 !== 5) {
-        rctx.fillStyle = '#334155';
+        rctx.fillStyle = '#09090b';
         rctx.fillRect(x - 3, 28, 6, 6);
         rctx.fillRect(x - 3, 38, 6, 6);
         rctx.fillRect(x - 3, 472, 6, 6);
         rctx.fillRect(x - 3, 482, 6, 6);
       }
 
-      // Colunas A-E (Mão Superior da Rua: Y = 78 a 214)
+      // Colunas A-E (Mão Superior da Rua: Y = 82 a 210)
       for (let row = 0; row < 5; row++) {
         const py = 82 + row * 32;
-        rctx.fillStyle = '#cbd5e1';
+        rctx.fillStyle = '#3f3f46';
         rctx.fillRect(x - 5, py - 5, 10, 10);
-        rctx.fillStyle = '#1e293b';
+        rctx.fillStyle = '#09090b';
         rctx.fillRect(x - 3, py - 3, 6, 6);
       }
 
-      // Colunas F-J (Mão Inferior da Rua: Y = 296 a 432)
+      // Colunas F-J (Mão Inferior da Rua: Y = 300 a 428)
       for (let row = 0; row < 5; row++) {
         const py = 300 + row * 32;
-        rctx.fillStyle = '#cbd5e1';
+        rctx.fillStyle = '#3f3f46';
         rctx.fillRect(x - 5, py - 5, 10, 10);
-        rctx.fillStyle = '#1e293b';
+        rctx.fillStyle = '#09090b';
         rctx.fillRect(x - 3, py - 3, 6, 6);
       }
     }
@@ -423,26 +425,24 @@ class MaquetePhysicalScene {
     rctx.fillStyle = '#facc15';
     for (let x = 160; x < 1880; x += 68) {
       rctx.fillRect(x, 248, 42, 16);
-      rctx.strokeStyle = 'rgba(161, 98, 7, 0.45)';
+      rctx.strokeStyle = 'rgba(161, 98, 7, 0.5)';
       rctx.lineWidth = 1.5;
       rctx.strokeRect(x, 248, 42, 16);
     }
 
-    // Faixas de pedestres improvisadas com tirinhas de fita isolante preta e etiquetas brancas nas pontas da protoboard
+    // Faixas de pedestres improvisadas com tirinhas de fita branca coladas sobre os furos nas extremidades da protoboard
     const crosswalkPositions = [88, 1852];
     crosswalkPositions.forEach(cwX => {
-      // Fundo de fita isolante preta colada sobre a protoboard
-      rctx.fillStyle = '#18181b';
+      rctx.fillStyle = 'rgba(9, 9, 11, 0.78)';
       rctx.fillRect(cwX - 8, 68, 120, 376);
-      // Tiras brancas da faixa de pedestres
       rctx.fillStyle = '#f8fafc';
       for (let y = 80; y <= 416; y += 44) {
         rctx.fillRect(cwX + 4, y, 96, 24);
       }
     });
 
-    // Setas indicativas de fluxo desenhadas à caneta marcadora sobre a protoboard
-    rctx.fillStyle = 'rgba(15, 23, 42, 0.65)';
+    // Setas direcionais brancas desenhadas sobre as duas mãos da Protoboard-Rua
+    rctx.fillStyle = 'rgba(248, 250, 252, 0.72)';
     [520, 1024, 1520].forEach(ax => {
       // Seta mão superior (Oeste <- Leste)
       rctx.fillRect(ax, 142, 50, 8);
@@ -464,10 +464,10 @@ class MaquetePhysicalScene {
     const roadTex = new THREE.CanvasTexture(roadCanvas);
     roadTex.anisotropy = 8;
 
-    const protoSideMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.45, metalness: 0.05 });
-    const protoTopMat = new THREE.MeshStandardMaterial({ map: roadTex, roughness: 0.42, metalness: 0.06 });
+    const protoSideMat = new THREE.MeshStandardMaterial({ color: 0x27272a, roughness: 0.35, metalness: 0.15 });
+    const protoTopMat = new THREE.MeshStandardMaterial({ map: roadTex, roughness: 0.38, metalness: 0.1 });
 
-    // Corpo elevado da Protoboard-Rua no centro da maquete (Z = -1.6, altura de protoboard real)
+    // Corpo elevado da Protoboard da Direita (Fumê) posicionada no meio da maquete fazendo papel de Rua Improvisada
     const roadMesh = new THREE.Mesh(
       new THREE.BoxGeometry(46.8, 0.36, 7.6),
       [protoSideMat, protoSideMat, protoTopMat, protoSideMat, protoSideMat, protoSideMat]
@@ -477,33 +477,52 @@ class MaquetePhysicalScene {
     roadMesh.castShadow = true;
     this.streetGroup.add(roadMesh);
 
-    // Abas de encaixe lateral típicas de protoboard nas bordas da rua
+    // Abas de encaixe lateral típicas de protoboard nas bordas da Protoboard-Rua
     [-16.0, -5.0, 5.0, 16.0].forEach(tx => {
       const tabN = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.28, 0.25), protoSideMat);
       tabN.position.set(tx, 0.56, -5.45);
       this.streetGroup.add(tabN);
+
+      const tabS = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.28, 0.25), protoSideMat);
+      tabS.position.set(tx, 0.56, 2.25);
+      this.streetGroup.add(tabS);
     });
 
-    // Componentes espetados nas bordas da Protoboard-Rua (Resistores 220Ω + LEDs indicadores + Fios até cada Poste de PVC)
+    // Os 12 Resistores de 220Ω da antiga Protoboard da Direita agora estão espetados ao longo das bordas da Protoboard-Rua!
     const smartColors = [0xef4444, 0xf97316, 0xeab308, 0x22c55e, 0x3b82f6, 0xa855f7];
+    const convColors = [0x94a3b8, 0xffffff, 0xd946ef, 0xa855f7, 0x22c55e, 0xeab308];
+
     for (let i = 0; i < 6; i++) {
       const px = this.polePositionsX[i];
 
-      // Resistor limitador de 220Ω espetado diretamente no barramento norte da Protoboard-Rua
-      const streetRes = this.createThroughHoleResistor([0xef4444, 0xef4444, 0x78350f, 0xeab308]);
-      streetRes.position.set(px - 0.85, 0.88, -4.85);
-      this.streetGroup.add(streetRes);
+      // 1. Resistor de 220Ω do Canal Inteligente espetado na margem norte da Protoboard-Rua (junto ao Poste de PVC)
+      const smartRes = this.createThroughHoleResistor([0xef4444, 0xef4444, 0x78350f, 0xeab308]);
+      smartRes.position.set(px - 0.85, 0.88, -4.85);
+      this.streetGroup.add(smartRes);
 
-      // Jumper saindo do trilho da Protoboard-Rua e subindo pela base do Poste de PVC
+      // Jumper saindo do trilho da Protoboard-Rua diretamente para a base do Poste de PVC
       this.createRealisticJumperWire(
-        new THREE.Vector3(px - 0.35, 0.72, -4.85),
+        new THREE.Vector3(px - 0.35, 0.76, -4.85),
         new THREE.Vector3(px, 0.88, -5.65),
         smartColors[i],
         0.55
       );
+
+      // 2. Resistor de 220Ω do Canal Convencional espetado na margem sul da Protoboard-Rua (junto ao Sensor IR)
+      const convRes = this.createThroughHoleResistor([0xef4444, 0xef4444, 0x78350f, 0xeab308]);
+      convRes.position.set(px + 0.85, 0.88, 1.65);
+      this.streetGroup.add(convRes);
+
+      // Jumper conectando o Sensor IR diretamente ao barramento sul da Protoboard-Rua
+      this.createRealisticJumperWire(
+        new THREE.Vector3(px + 0.35, 0.76, 1.65),
+        new THREE.Vector3(px, 0.92, 2.35),
+        convColors[i],
+        0.48
+      );
     }
 
-    // Calçadas laterais em MDF/papelão cinza margeando a Protoboard-Rua
+    // Calçadas laterais em MDF/concreto margeando a Protoboard-Rua
     const sidewalkCanvas = document.createElement('canvas');
     sidewalkCanvas.width = 1024;
     sidewalkCanvas.height = 128;
@@ -529,17 +548,17 @@ class MaquetePhysicalScene {
       sw.castShadow = true;
       this.streetGroup.add(sw);
 
-      // Guia / Meio-fio branco e amarelo
+      // Guia / Meio-fio branco e amarelo encostado na Protoboard-Rua
       const curbZ = idx === 0 ? sz + 1.02 : sz - 1.02;
       const curb = new THREE.Mesh(new THREE.BoxGeometry(46.8, 0.30, 0.12), curbMat);
       curb.position.set(0, 0.65, curbZ);
       this.streetGroup.add(curb);
     });
 
-    // Etiqueta identificando a "Protoboard-Rua" improvisada
-    const protoStreetTag = this.createPcbTextLabel('PROTOBOARD CENTRAL (RUA IMPROVISADA DE 2 MÃOS)');
-    protoStreetTag.scale.set(0.85, 0.85, 0.85);
-    protoStreetTag.position.set(0, 0.80, -5.05);
+    // Etiqueta identificando a Protoboard da Direita fazendo papel de Rua Improvisada no meio
+    const protoStreetTag = this.createPcbTextLabel('PROTOBOARD DE RESISTORES (RUA IMPROVISADA NO MEIO)');
+    protoStreetTag.scale.set(0.88, 0.88, 0.88);
+    protoStreetTag.position.set(0, 0.82, -5.05);
     this.streetGroup.add(protoStreetTag);
 
     this.scene.add(this.streetGroup);
