@@ -516,11 +516,14 @@ class MaquetePhysicalScene {
     });
 
     // =========================================================================
-    // FIOS JUMPERS E RESISTORES NA PROTOBOARD-RUA (Mesmo com os fios, ela é a rua!):
-    // - 12 Resistores de 220Ω espetados diretamente nos furos da Protoboard-Rua
-    // - Pontes de fio jumper (vermelho VCC e azul/preto GND) interligando os barramentos da rua
-    // - Fios de sinal e terra saindo dos furos da Protoboard-Rua diretamente para os 6 Postes e 6 Sensores IR!
+    // ARDUINO NANO + FIOS JUMPERS E RESISTORES NA PROTOBOARD-RUA:
+    // - A Protoboard Principal COM O ARDUINO NANO no meio serve como a própria rua improvisada!
+    // - Arduino Nano encaixado no sulco central (DIP ravine) da Protoboard-Rua (em X = -19.8, Z = -1.6)
+    // - 12 Resistores de 220Ω e LEDs brancos espetados diretamente nos furos da Protoboard-Rua
+    // - Fios jumpers saindo do Arduino Nano pelos furos da Protoboard-Rua para os 6 Postes e 6 Sensores IR!
     // =========================================================================
+    this.buildArduinoNanoOnStreetBreadboard(-19.8, 0.86, -1.6);
+
     const smartColors = [0xef4444, 0xf97316, 0xeab308, 0x22c55e, 0x3b82f6, 0xa855f7];
     const convColors = [0x94a3b8, 0xffffff, 0xd946ef, 0xa855f7, 0x22c55e, 0xeab308];
 
@@ -549,6 +552,14 @@ class MaquetePhysicalScene {
       const smartRes = this.createThroughHoleResistor([0xef4444, 0xef4444, 0x78350f, 0xeab308]);
       smartRes.position.set(px - 0.85, 0.88, -4.65);
       this.streetGroup.add(smartRes);
+
+      // Fio jumper saindo do pino digital do Arduino Nano (na Protoboard-Rua) até o resistor do poste na Protoboard-Rua
+      this.createRealisticJumperWire(
+        new THREE.Vector3(-21.2 + i * 0.45, 0.96, -2.45),
+        new THREE.Vector3(px - 1.35, 0.78, -4.65),
+        smartColors[i],
+        0.68 + (i % 3) * 0.18
+      );
 
       // Fio colorido de Sinal saindo do furo da Protoboard-Rua para a base do Poste de PVC
       this.createRealisticJumperWire(
@@ -1265,10 +1276,336 @@ class MaquetePhysicalScene {
     // 6. MINI PROTOBOARD DO SENSOR LDR + RODA DE LUZ (em X = -15.5, Z = 13.0)
     this.buildLdrSensorAndWheelModule(-15.5, 0.85, 13.0);
 
-    // 7. FONTE DE ALIMENTAÇÃO REGULADA (Módulo Fonte Protoboard MB102 + Fonte DC 12V/9V com Plug P4 em X = +13.5, Z = 13.0)
-    this.buildPowerSupplyModule(13.5, 0.85, 13.0);
+    // 7. NOTEBOOK / PC COMO FONTE DE ALIMENTAÇÃO E CONEXÃO DO DASHBOARD VIA CABO USB NO ARDUINO
+    //    - Notebook posicionado na bancada com a tela exibindo o Dashboard de Energia & Telemetria ao vivo
+    //    - Cabo USB azul saindo da porta USB do Notebook e conectando diretamente na porta Mini-USB do Arduino Nano!
+    this.buildPowerSupplyModule(14.2, 0.65, 13.0);
+    this.buildNotebookPcOnDesk(-29.5, -0.82, 4.5);
 
     this.scene.add(this.techBayGroup);
+  }
+
+  /**
+   * Constrói o ARDUINO NANO (ATmega328P) encaixado diretamente na PROTOBOARD-RUA (no meio da maquete)
+   * com conector Mini-USB voltado para a esquerda onde entra o Cabo USB vindo do Notebook!
+   */
+  buildArduinoNanoOnStreetBreadboard(x, y, z) {
+    const nanoGroup = new THREE.Group();
+    nanoGroup.position.set(x, y, z);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+
+    ctx.fillStyle = '#0369a1';
+    ctx.fillRect(0, 0, 512, 256);
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 6;
+    ctx.strokeRect(4, 4, 504, 248);
+
+    const topPins = ['D12', 'D11', 'D10', 'D9', 'D8', 'D7', 'D6', 'D5', 'D4', 'D3', 'D2', 'GND', 'RST', 'RX0', 'TX1'];
+    const botPins = ['D13', '3V3', 'REF', 'A0', 'A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', '5V', 'RST', 'GND', 'VIN'];
+
+    ctx.font = 'bold 14px monospace';
+    ctx.textAlign = 'center';
+    for (let i = 0; i < 15; i++) {
+      const px = 42 + i * 30.5;
+      ctx.fillStyle = '#eab308';
+      ctx.beginPath(); ctx.arc(px, 22, 8, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(px, 234, 8, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(topPins[i], px, 48);
+      ctx.fillText(botPins[i], px, 212);
+    }
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 28px sans-serif';
+    ctx.fillText('ARDUINO', 295, 115);
+    ctx.fillStyle = '#bae6fd';
+    ctx.font = 'bold 22px monospace';
+    ctx.fillText('NANO (NA RUA)', 295, 145);
+
+    const pcbTex = new THREE.CanvasTexture(canvas);
+    const pcbMesh = new THREE.Mesh(
+      new THREE.BoxGeometry(4.6, 0.16, 1.95),
+      new THREE.MeshStandardMaterial({ map: pcbTex, roughness: 0.35, metalness: 0.15 })
+    );
+    pcbMesh.castShadow = true;
+    nanoGroup.add(pcbMesh);
+
+    const atmega = new THREE.Mesh(
+      new THREE.BoxGeometry(0.72, 0.14, 0.72),
+      new THREE.MeshStandardMaterial({ color: 0x09090b, roughness: 0.35 })
+    );
+    atmega.rotation.y = Math.PI / 4;
+    atmega.position.set(-0.35, 0.14, 0);
+    nanoGroup.add(atmega);
+
+    // Conector Mini-USB metálico na ponta esquerda da Protoboard-Rua
+    const miniUsb = new THREE.Mesh(
+      new THREE.BoxGeometry(0.88, 0.36, 0.82),
+      new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.9, roughness: 0.18 })
+    );
+    miniUsb.position.set(-2.18, 0.22, 0);
+    nanoGroup.add(miniUsb);
+
+    // Plug do Cabo USB Azul conectado diretamente no Mini-USB do Arduino Nano na Protoboard-Rua
+    const usbPlug = new THREE.Mesh(
+      new THREE.BoxGeometry(0.95, 0.42, 0.88),
+      new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.35 })
+    );
+    usbPlug.position.set(-2.95, 0.22, 0);
+    nanoGroup.add(usbPlug);
+
+    const ledOn = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.1, 0.18), new THREE.MeshBasicMaterial({ color: 0x22c55e }));
+    ledOn.position.set(-1.3, 0.13, 0.35);
+    nanoGroup.add(ledOn);
+
+    const ledTx = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.1, 0.18), new THREE.MeshBasicMaterial({ color: 0x38bdf8 }));
+    ledTx.position.set(-1.3, 0.13, -0.35);
+    nanoGroup.add(ledTx);
+
+    const tagNano = this.createPcbTextLabel('ARDUINO NANO NA PROTOBOARD-RUA (USB CONECTADO)');
+    tagNano.scale.set(0.72, 0.72, 0.72);
+    tagNano.position.set(0.4, 0.32, -1.55);
+    nanoGroup.add(tagNano);
+
+    this.streetGroup.add(nanoGroup);
+    this.streetArduinoNanoGroup = nanoGroup;
+  }
+
+  /**
+   * Constrói um NOTEBOOK / PC 3D completo ao lado da maquete servindo como:
+   * 1. Fonte de Alimentação 5V via USB para o Arduino Nano e para a Protoboard-Rua
+   * 2. Estação de Monitoramento exibindo o Dashboard de Energia & Serial Monitor na tela
+   * 3. Conectado por Cabo USB azul tanto ao Arduino Nano da Protoboard-Rua quanto ao Arduino Nano da Área Técnica!
+   */
+  buildNotebookPcOnDesk(x, y, z) {
+    const laptopGroup = new THREE.Group();
+    laptopGroup.position.set(x, y, z);
+    laptopGroup.rotation.y = Math.PI / 5.5; // Voltado em ângulo ergonômico para a maquete e para a câmera
+
+    const chassisMat = new THREE.MeshStandardMaterial({
+      color: 0x334155,
+      roughness: 0.28,
+      metalness: 0.75
+    });
+    const darkKeyMat = new THREE.MeshStandardMaterial({
+      color: 0x0f172a,
+      roughness: 0.65,
+      metalness: 0.15
+    });
+
+    // 1. Base do Notebook (Teclado + Trackpad + Portas USB laterais)
+    const baseW = 10.5;
+    const baseD = 7.4;
+    const baseH = 0.42;
+    const baseMesh = new THREE.Mesh(new THREE.BoxGeometry(baseW, baseH, baseD), chassisMat);
+    baseMesh.position.set(0, baseH / 2, 0);
+    baseMesh.castShadow = true;
+    baseMesh.receiveShadow = true;
+    laptopGroup.add(baseMesh);
+
+    // Teclado QWERTY em baixo relevo
+    const kbCanvas = document.createElement('canvas');
+    kbCanvas.width = 512;
+    kbCanvas.height = 256;
+    const kctx = kbCanvas.getContext('2d');
+    kctx.fillStyle = '#0f172a';
+    kctx.fillRect(0, 0, 512, 256);
+    kctx.fillStyle = '#1e293b';
+    kctx.strokeStyle = '#38bdf8';
+    kctx.lineWidth = 1;
+    for (let r = 0; r < 6; r++) {
+      for (let c = 0; c < 15; c++) {
+        const kx = 14 + c * 32.5;
+        const ky = 14 + r * 38;
+        kctx.fillRect(kx, ky, 28, 32);
+        kctx.strokeRect(kx, ky, 28, 32);
+      }
+    }
+    const kbTex = new THREE.CanvasTexture(kbCanvas);
+    const kbPlane = new THREE.Mesh(
+      new THREE.PlaneGeometry(baseW * 0.86, baseD * 0.52),
+      new THREE.MeshBasicMaterial({ map: kbTex })
+    );
+    kbPlane.rotation.x = -Math.PI / 2;
+    kbPlane.position.set(0, baseH + 0.01, -0.65);
+    laptopGroup.add(kbPlane);
+
+    // Trackpad centralizado
+    const trackpad = new THREE.Mesh(
+      new THREE.PlaneGeometry(2.8, 1.75),
+      new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.3, metalness: 0.5 })
+    );
+    trackpad.rotation.x = -Math.PI / 2;
+    trackpad.position.set(0, baseH + 0.01, 2.25);
+    laptopGroup.add(trackpad);
+
+    // 2. Tela / Monitor do Notebook aberta a ~108 graus exibindo o Dashboard da Rua Inteligente
+    const lidPivot = new THREE.Group();
+    lidPivot.position.set(0, baseH, -baseD / 2 + 0.15);
+    lidPivot.rotation.x = -0.28; // Levemente inclinada para trás
+
+    const screenH = 6.8;
+    const lidMesh = new THREE.Mesh(new THREE.BoxGeometry(baseW, screenH, 0.26), chassisMat);
+    lidMesh.position.set(0, screenH / 2, 0);
+    lidMesh.castShadow = true;
+    lidPivot.add(lidMesh);
+
+    // Canvas do Dashboard renderizado ao vivo na tela do Notebook
+    const screenCanvas = document.createElement('canvas');
+    screenCanvas.width = 1024;
+    screenCanvas.height = 640;
+    const sctx = screenCanvas.getContext('2d');
+
+    // Fundo estilo macOS / Dashboard de Energia
+    sctx.fillStyle = '#090d16';
+    sctx.fillRect(0, 0, 1024, 640);
+
+    // Barra de topo do app no Notebook
+    sctx.fillStyle = '#1e293b';
+    sctx.fillRect(0, 0, 1024, 48);
+    sctx.fillStyle = '#ef4444'; sctx.beginPath(); sctx.arc(26, 24, 8, 0, Math.PI * 2); sctx.fill();
+    sctx.fillStyle = '#f59e0b'; sctx.beginPath(); sctx.arc(50, 24, 8, 0, Math.PI * 2); sctx.fill();
+    sctx.fillStyle = '#10b981'; sctx.beginPath(); sctx.arc(74, 24, 8, 0, Math.PI * 2); sctx.fill();
+
+    sctx.fillStyle = '#f8fafc';
+    sctx.font = 'bold 22px sans-serif';
+    sctx.fillText('DASHBOARD DE ENERGIA & TELEMETRIA USB (COM3 - 115200 BAUD)', 110, 31);
+
+    // Cards de KPI no Notebook
+    const kpiColors = ['#38bdf8', '#10b981', '#f59e0b', '#a855f7'];
+    const kpiTitles = ['ALIMENTAÇÃO USB', 'ECONOMIA MÉDIA', 'POSTES ATIVOS', 'ARDUINO NANO'];
+    const kpiVals = ['5.0V / 500mA', '70.0% POUPADO', '6x CANAIS PWM', 'CONECTADO'];
+    for (let k = 0; k < 4; k++) {
+      const kx = 28 + k * 244;
+      sctx.fillStyle = '#111827';
+      sctx.fillRect(kx, 70, 226, 115);
+      sctx.strokeStyle = kpiColors[k];
+      sctx.lineWidth = 3;
+      sctx.strokeRect(kx, 70, 226, 115);
+      sctx.fillStyle = '#94a3b8';
+      sctx.font = 'bold 16px monospace';
+      sctx.fillText(kpiTitles[k], kx + 16, 102);
+      sctx.fillStyle = kpiColors[k];
+      sctx.font = 'bold 26px sans-serif';
+      sctx.fillText(kpiVals[k], kx + 16, 152);
+    }
+
+    // Gráfico de potência em tempo real na tela do Notebook
+    sctx.fillStyle = '#111827';
+    sctx.fillRect(28, 208, 610, 396);
+    sctx.strokeStyle = '#334155';
+    sctx.strokeRect(28, 208, 610, 396);
+    sctx.fillStyle = '#f8fafc';
+    sctx.font = 'bold 20px sans-serif';
+    sctx.fillText('CURVA DE POTÊNCIA: CONVENCIONAL (600W) vs INTELIGENTE (PWM)', 48, 245);
+
+    // Linha amarela convencional
+    sctx.strokeStyle = '#f59e0b';
+    sctx.lineWidth = 5;
+    sctx.beginPath();
+    sctx.moveTo(54, 300);
+    sctx.lineTo(610, 300);
+    sctx.stroke();
+
+    // Área verde de economia e curva azul inteligente
+    sctx.fillStyle = 'rgba(16, 185, 129, 0.22)';
+    sctx.fillRect(54, 300, 556, 190);
+    sctx.strokeStyle = '#06b6d4';
+    sctx.lineWidth = 5;
+    sctx.beginPath();
+    sctx.moveTo(54, 490);
+    sctx.lineTo(190, 490);
+    sctx.lineTo(230, 340);
+    sctx.lineTo(350, 340);
+    sctx.lineTo(395, 490);
+    sctx.lineTo(610, 490);
+    sctx.stroke();
+
+    // Janela Serial Monitor ao lado na tela do Notebook
+    sctx.fillStyle = '#030712';
+    sctx.fillRect(658, 208, 338, 396);
+    sctx.strokeStyle = '#10b981';
+    sctx.strokeRect(658, 208, 338, 396);
+    sctx.fillStyle = '#10b981';
+    sctx.font = 'bold 18px monospace';
+    sctx.fillText('SERIAL MONITOR (USB)', 676, 242);
+    sctx.font = '15px monospace';
+    sctx.fillStyle = '#cbd5e1';
+    sctx.fillText('> USB 5V Power: OK', 676, 282);
+    sctx.fillText('> LDR ADC: 450 (NOITE)', 676, 314);
+    sctx.fillText('> IR1..6: [0 0 1 0 0 0]', 676, 346);
+    sctx.fillText('> PWM: 30 60 100 60 30 30', 676, 378);
+    sctx.fillStyle = '#38bdf8';
+    sctx.fillText('> Dashboard Sincronizado!', 676, 420);
+
+    const screenTex = new THREE.CanvasTexture(screenCanvas);
+    const displayPlane = new THREE.Mesh(
+      new THREE.PlaneGeometry(baseW - 0.55, screenH - 0.55),
+      new THREE.MeshBasicMaterial({ map: screenTex })
+    );
+    displayPlane.position.set(0, screenH / 2, 0.14);
+    lidPivot.add(displayPlane);
+
+    // Brilho suave emitido pela tela do Notebook
+    const screenGlow = new THREE.PointLight(0x38bdf8, 0.65, 12);
+    screenGlow.position.set(0, screenH / 2, 1.5);
+    lidPivot.add(screenGlow);
+
+    laptopGroup.add(lidPivot);
+
+    // Etiqueta de identificação do Notebook como Fonte de Alimentação + Dashboard PC
+    const tagLaptop = this.createPcbTextLabel('NOTEBOOK (FONTE USB 5V & DASHBOARD AO VIVO)');
+    tagLaptop.scale.set(0.95, 0.95, 0.95);
+    tagLaptop.position.set(0, 0.15, 4.75);
+    laptopGroup.add(tagLaptop);
+
+    this.scene.add(laptopGroup);
+    this.notebookGroup = laptopGroup;
+
+    // =========================================================================
+    // 3. CABOS USB AZUIS BLINDADOS CONECTANDO O NOTEBOOK AO ARDUINO NANO:
+    //    - Cabo USB 1: Sai da porta USB direita do Notebook -> Entra no Mini-USB do Arduino Nano na Protoboard-Rua!
+    //    - Cabo USB 2: Sai da porta USB direita do Notebook -> Entra no Arduino Nano da Área Técnica!
+    // =========================================================================
+    const usbCableMat = new THREE.MeshStandardMaterial({
+      color: 0x0284c7,
+      roughness: 0.3,
+      metalness: 0.15
+    });
+
+    // Cabo USB Principal -> Arduino Nano na Protoboard-Rua (alimenta a rua e envia dados ao Dashboard)
+    const usbPointsStreet = [
+      new THREE.Vector3(x + 4.4, y + 0.28, z - 1.2),   // Porta USB na lateral do Notebook
+      new THREE.Vector3(-25.2, 0.35, 1.0),             // Passa sobre a bancada e sobe na borda de MDF
+      new THREE.Vector3(-23.8, 1.15, -1.6),            // Entrada lateral esquerda da Protoboard-Rua
+      new THREE.Vector3(-22.7, 1.08, -1.6)             // Conector Mini-USB do Arduino Nano na Protoboard-Rua!
+    ];
+    const usbCurveStreet = new THREE.CatmullRomCurve3(usbPointsStreet);
+    const usbMeshStreet = new THREE.Mesh(
+      new THREE.TubeGeometry(usbCurveStreet, 36, 0.11, 10, false),
+      usbCableMat
+    );
+    usbMeshStreet.castShadow = true;
+    this.scene.add(usbMeshStreet);
+
+    // Cabo USB Secundário -> Arduino Nano na Área Técnica Frontal (sincronizado com o mesmo Notebook)
+    const usbPointsTech = [
+      new THREE.Vector3(x + 3.8, y + 0.28, z + 0.8),   // Segunda porta USB na lateral do Notebook
+      new THREE.Vector3(-24.8, 0.45, 9.5),             // Curva suave sobre a bancada
+      new THREE.Vector3(-19.5, 1.35, 13.0),            // Entra na Área Técnica
+      new THREE.Vector3(-8.7, 1.55, 13.0)              // Conector Mini-USB do Arduino Nano na Área Técnica!
+    ];
+    const usbCurveTech = new THREE.CatmullRomCurve3(usbPointsTech);
+    const usbMeshTech = new THREE.Mesh(
+      new THREE.TubeGeometry(usbCurveTech, 36, 0.11, 10, false),
+      usbCableMat
+    );
+    usbMeshTech.castShadow = true;
+    this.scene.add(usbMeshTech);
   }
 
   /**
@@ -2282,9 +2619,9 @@ class MaquetePhysicalScene {
         this.controls.target.set(-15.5, 1.2, 13.0);
         break;
       case 'leds':
-        // Foco na Fonte de Alimentação e Barramento de LEDs/Resistores
-        this.camera.position.set(9.0, 10.5, 23.5);
-        this.controls.target.set(7.5, 1.2, 13.0);
+        // Foco no Notebook (Fonte USB 5V & Dashboard ao vivo) + Cabo USB conectado no Arduino Nano da Protoboard-Rua
+        this.camera.position.set(-24.0, 11.5, 22.0);
+        this.controls.target.set(-24.5, 2.2, 2.0);
         break;
       case 'palitos':
       case 'postes':
