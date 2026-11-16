@@ -55,11 +55,11 @@ class MaquetePhysicalScene {
     this.jumperWires = [];
     this.buildingWindows = [];
 
-    // Veículos e pedestres em miniatura na rua da maquete
+    // Sem carros ou pedestres na maquete (acionamento limpo pelos sensores IR ou mão 3D)
     this.miniCars = [];
     this.miniPedestrians = [];
-    this.autoTrafficEnabled = true;
-    this.demoMode = 'night_motion'; // 'day' | 'night' | 'night_motion'
+    this.autoTrafficEnabled = false;
+    this.demoMode = 'night'; // 'day' | 'night' | 'night_motion'
 
     // Estado da caixa de acrílico transparente removível
     this.acrylicCoverOpen = false;
@@ -93,7 +93,6 @@ class MaquetePhysicalScene {
     this.buildInfraredStreetSensors();
     this.buildTechnicalAreaElectronics();
     this.buildRemovableAcrylicCover();
-    this.buildScaleVehiclesAndPedestrians();
     this.buildHandActor();
     this.initInteraction();
 
@@ -519,24 +518,28 @@ class MaquetePhysicalScene {
     // ARDUINO NANO + FIOS JUMPERS E RESISTORES NA PROTOBOARD-RUA:
     // - A Protoboard Principal COM O ARDUINO NANO no meio serve como a própria rua improvisada!
     // - Arduino Nano encaixado no sulco central (DIP ravine) da Protoboard-Rua (em X = -19.8, Z = -1.6)
-    // - 12 Resistores de 220Ω e LEDs brancos espetados diretamente nos furos da Protoboard-Rua
+    // - 12 Resistores de 220Ω e 6 LEDs brancos espetados diretamente nos furos da Protoboard-Rua
     // - Fios jumpers saindo do Arduino Nano pelos furos da Protoboard-Rua para os 6 Postes e 6 Sensores IR!
     // =========================================================================
     this.buildArduinoNanoOnStreetBreadboard(-19.8, 0.86, -1.6);
+
+    this.breadboardSmartLeds = [];
+    this.breadboardConvLeds = [];
+    this.breadboardLedLights = [];
 
     const smartColors = [0xef4444, 0xf97316, 0xeab308, 0x22c55e, 0x3b82f6, 0xa855f7];
     const convColors = [0x94a3b8, 0xffffff, 0xd946ef, 0xa855f7, 0x22c55e, 0xeab308];
 
     // Pontes de alimentação (jumpers em U) ao longo dos trilhos da Protoboard-Rua
     [-11.5, 0.0, 11.5].forEach(bx => {
-      // Ponte vermelha VCC (+)
+      // Ponte vermelha VCC (+ 5V vindo do USB do Notebook)
       this.createRealisticJumperWire(
         new THREE.Vector3(bx - 1.2, 0.72, -5.15),
         new THREE.Vector3(bx + 1.2, 0.72, -5.15),
         0xef4444,
         0.35
       );
-      // Ponte azul/preta GND (-)
+      // Ponte azul/preta GND (- vindo do USB do Notebook)
       this.createRealisticJumperWire(
         new THREE.Vector3(bx - 1.2, 0.72, 1.95),
         new THREE.Vector3(bx + 1.2, 0.72, 1.95),
@@ -544,6 +547,21 @@ class MaquetePhysicalScene {
         0.35
       );
     });
+
+    // Fios de Alimentação 5V (Vermelho) e GND (Preto) saindo dos pinos 5V/GND do Arduino Nano (alimentado pelo Notebook)
+    // para energizar os barramentos laterais da Protoboard-Rua!
+    this.createRealisticJumperWire(
+      new THREE.Vector3(-18.2, 0.96, -0.85),
+      new THREE.Vector3(-17.8, 0.76, -5.15),
+      0xef4444,
+      0.85
+    );
+    this.createRealisticJumperWire(
+      new THREE.Vector3(-17.8, 0.96, -0.85),
+      new THREE.Vector3(-17.4, 0.76, 1.95),
+      0x0f172a,
+      0.75
+    );
 
     for (let i = 0; i < 6; i++) {
       const px = this.polePositionsX[i];
@@ -553,12 +571,19 @@ class MaquetePhysicalScene {
       smartRes.position.set(px - 0.85, 0.88, -4.65);
       this.streetGroup.add(smartRes);
 
-      // Fio jumper saindo do pino digital do Arduino Nano (na Protoboard-Rua) até o resistor do poste na Protoboard-Rua
+      // LED Branco 5mm indicador espetado diretamente na Protoboard-Rua ao lado do resistor
+      const ledObj = this.create5mmLedMesh(0xffffff);
+      ledObj.group.position.set(px - 1.55, 0.76, -4.65);
+      this.streetGroup.add(ledObj.group);
+      this.breadboardSmartLeds.push(ledObj.material);
+      this.breadboardLedLights.push(ledObj.light);
+
+      // Fio jumper saindo do pino PWM do Arduino Nano (na Protoboard-Rua) até o resistor do poste na Protoboard-Rua
       this.createRealisticJumperWire(
         new THREE.Vector3(-21.2 + i * 0.45, 0.96, -2.45),
         new THREE.Vector3(px - 1.35, 0.78, -4.65),
         smartColors[i],
-        0.68 + (i % 3) * 0.18
+        0.72 + (i % 3) * 0.18
       );
 
       // Fio colorido de Sinal saindo do furo da Protoboard-Rua para a base do Poste de PVC
@@ -577,12 +602,19 @@ class MaquetePhysicalScene {
         0.52
       );
 
-      // 2. Resistor de 220Ω do Canal Convencional espetado na margem sul da Protoboard-Rua
+      // 2. Resistor de 220Ω na margem sul da Protoboard-Rua
       const convRes = this.createThroughHoleResistor([0xef4444, 0xef4444, 0x78350f, 0xeab308]);
       convRes.position.set(px + 0.85, 0.88, 1.45);
       this.streetGroup.add(convRes);
 
-      // Fio de Sinal conectando o Sensor IR diretamente aos furos da Protoboard-Rua
+      // Fio de Sinal conectando o Sensor IR diretamente ao pino digital do Arduino Nano pela Protoboard-Rua
+      this.createRealisticJumperWire(
+        new THREE.Vector3(-21.0 + i * 0.45, 0.96, -0.85),
+        new THREE.Vector3(px + 0.35, 0.76, 1.45),
+        convColors[i],
+        0.62 + (i % 2) * 0.18
+      );
+
       this.createRealisticJumperWire(
         new THREE.Vector3(px + 0.35, 0.76, 1.45),
         new THREE.Vector3(px, 0.92, 2.35),
@@ -646,32 +678,16 @@ class MaquetePhysicalScene {
     const terracottaRoofMat = new THREE.MeshStandardMaterial({ color: 0xb45309, roughness: 0.65 });
     const darkRoofMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.6 });
 
-    // 1. LADO NORTE (Z = -10.5): Casas residenciais e edifícios acadêmicos/comerciais em escala
+    // Menos construções e bem espaçadas na lateral norte (Z = -10.5) para manter a maquete limpa e destacar a Protoboard-Rua
     const northConfigs = [
-      { x: -18.5, w: 6.2, h: 4.2, d: 4.2, type: 'house', wallMat: foamboardMat, roofMat: terracottaRoofMat, label: 'RESIDÊNCIA 01' },
-      { x: -10.5, w: 6.8, h: 7.4, d: 4.5, type: 'building', wallMat: mdfWallMat, roofMat: darkRoofMat, label: 'ED. ENGENHARIA' },
-      { x: -2.0,  w: 6.0, h: 4.6, d: 4.2, type: 'house', wallMat: cardboardMat, roofMat: terracottaRoofMat, label: 'CASA MODELO' },
-      { x: 6.5,   w: 7.2, h: 8.6, d: 4.6, type: 'building', wallMat: foamboardMat, roofMat: darkRoofMat, label: 'LAB. SMART CITY' },
-      { x: 16.5,  w: 6.6, h: 5.2, d: 4.2, type: 'house', wallMat: mdfWallMat, roofMat: terracottaRoofMat, label: 'COMÉRCIO LOCAL' }
+      { x: -15.5, w: 6.2, h: 4.2, d: 4.2, type: 'house', wallMat: foamboardMat, roofMat: terracottaRoofMat, label: 'RESIDÊNCIA 01' },
+      { x: 0.0,   w: 6.8, h: 6.8, d: 4.4, type: 'building', wallMat: mdfWallMat, roofMat: darkRoofMat, label: 'ED. ENGENHARIA' },
+      { x: 15.5,  w: 6.2, h: 4.4, d: 4.2, type: 'house', wallMat: cardboardMat, roofMat: terracottaRoofMat, label: 'CASA MODELO' }
     ];
 
     northConfigs.forEach(cfg => {
       const bldg = this.createScaleModelBuilding(cfg.w, cfg.h, cfg.d, cfg.type, cfg.wallMat, cfg.roofMat, cfg.label);
       bldg.position.set(cfg.x, 0.6, -10.5);
-      this.buildingsGroup.add(bldg);
-    });
-
-    // 2. LADO SUL (Z = +6.4): Casinhas baixas e chalés de maquete (mais baixos para não obstruir a visão isométrica da rua)
-    const southConfigs = [
-      { x: -17.5, w: 5.2, h: 2.8, d: 2.8, type: 'house', wallMat: cardboardMat, roofMat: terracottaRoofMat, label: 'CASA 02' },
-      { x: -6.5,  w: 5.5, h: 3.1, d: 2.8, type: 'house', wallMat: foamboardMat, roofMat: darkRoofMat, label: 'QUIOSQUE URBANO' },
-      { x: 6.5,   w: 5.5, h: 3.0, d: 2.8, type: 'house', wallMat: mdfWallMat, roofMat: terracottaRoofMat, label: 'POSTO DE SAÚDE' },
-      { x: 17.5,  w: 5.2, h: 2.8, d: 2.8, type: 'house', wallMat: cardboardMat, roofMat: terracottaRoofMat, label: 'CASA 04' }
-    ];
-
-    southConfigs.forEach(cfg => {
-      const bldg = this.createScaleModelBuilding(cfg.w, cfg.h, cfg.d, cfg.type, cfg.wallMat, cfg.roofMat, cfg.label);
-      bldg.position.set(cfg.x, 0.6, 6.4);
       this.buildingsGroup.add(bldg);
     });
 
@@ -1185,101 +1201,29 @@ class MaquetePhysicalScene {
   }
 
   /**
-   * 3. COMPONENTES ELETRÔNICOS NA ÁREA TÉCNICA DA BASE DA MAQUETE:
-   *    - Área técnica organizada na faixa frontal da base de MDF (Z = +9.5 a +17.2)
-   *    - Arduino Nano como unidade central de controle na Protoboard Principal + Placa ESP32 DevKit em barramento integrado
-   *    - Módulo Sensor LDR + Roda de Ajuste de Luminosidade (Trimpot 3D)
-   *    - Barramento de Resistores e LEDs brancos/indicadores dos postes
-   *    - Fonte de Alimentação (Módulo MB102 + Fonte Chaveada 12V/5V com plug P4)
-   *    - Fios jumper conectando todos os componentes aos sensores IR e aos postes de PVC
+   * 3. ÁREA TÉCNICA E ALIMENTAÇÃO PELO COMPUTADOR / NOTEBOOK VIA CABO USB:
+   *    - A Protoboard Principal com o Arduino Nano já fica no centro da maquete fazendo o papel de Rua Improvisada!
+   *    - Não há fonte de alimentação externa separada: quem alimenta todo o sistema (5V USB) e recebe a telemetria
+   *      para o Dashboard é o Notebook / Computador conectado via Cabo USB diretamente no Arduino Nano da Protoboard-Rua!
+   *    - Na área técnica frontal (sob a caixa transparente removível) fica o módulo de leitura de luminosidade (Sensor LDR + Roda 3D)
+   *      conectado por fios jumpers diretamente ao pino A0/5V/GND do Arduino Nano na Protoboard-Rua!
    */
   buildTechnicalAreaElectronics() {
     this.techBayGroup = new THREE.Group();
 
-    // 1. Piso da Área Técnica em Acrílico Preto Fosco / Fibra de Carbono para destacar o circuito
+    // 1. Piso da Área Técnica Frontal para o Módulo LDR
     const bayFloor = new THREE.Mesh(
-      new THREE.BoxGeometry(44.0, 0.14, 7.6),
+      new THREE.BoxGeometry(14.0, 0.14, 6.8),
       new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.45, metalness: 0.15 })
     );
-    bayFloor.position.set(0, 0.56, 13.0);
+    bayFloor.position.set(-15.5, 0.56, 13.0);
     bayFloor.receiveShadow = true;
     this.techBayGroup.add(bayFloor);
 
-    // 2. PROTOBOARD CENTRAL GRANDE (Branca 830 pontos) com ARDUINO NANO + Barramento de Controle
-    const mainBb = this.createBreadboardMesh(16.5, 5.4, false);
-    mainBb.position.set(-2.5, 0.85, 13.0);
-    this.techBayGroup.add(mainBb);
-
-    // 3. ARDUINO NANO (Unidade Central de Controle na Protoboard Principal, em X = -6.5, Z = 13.0)
-    this.buildArduinoNanoOnBreadboard(-6.5, 1.35, 13.0);
-
-    // 4. ESP32 DevKit V1 (Co-processador Wi-Fi/Telemetria ao lado na Protoboard, em X = -0.2, Z = 13.0)
-    this.buildEsp32OnBreadboard(-0.2, 1.35, 13.0);
-
-    // 5. LEDs Brancos e Resistores dos 6 Postes na Protoboard Central (X = 2.4 a 4.9)
-    this.breadboardSmartLeds = [];
-    this.breadboardConvLeds = [];
-    this.breadboardLedLights = [];
-
-    const smartColors = [0xef4444, 0xf97316, 0xeab308, 0x22c55e, 0x3b82f6, 0xa855f7];
-    for (let i = 0; i < 6; i++) {
-      const lx = 2.1 + i * 0.58;
-      const lz = 12.1;
-
-      // Resistor 220 ohms
-      const res = this.createThroughHoleResistor([0xef4444, 0xef4444, 0x78350f, 0xeab308]);
-      res.rotation.y = Math.PI / 2;
-      res.position.set(lx, 1.28, 13.3);
-      this.techBayGroup.add(res);
-
-      // LED Branco 5mm de monitoramento de cada poste na protoboard
-      const ledObj = this.create5mmLedMesh(0xffffff);
-      ledObj.group.position.set(lx, 1.22, lz);
-      this.techBayGroup.add(ledObj.group);
-      this.breadboardSmartLeds.push(ledObj.material);
-      this.breadboardLedLights.push(ledObj.light);
-
-      // Fio jumper saindo do Arduino Nano para o resistor do LED na protoboard
-      const nanoPinPos = new THREE.Vector3(-7.6 + i * 0.42, 1.45, 12.25);
-      this.createRealisticJumperWire(
-        nanoPinPos,
-        new THREE.Vector3(lx, 1.25, 13.8),
-        smartColors[i],
-        1.1 + (i % 3) * 0.25
-      );
-
-      // Fio jumper saindo da área técnica e espetado diretamente nos furos/resistores da Protoboard-Rua no meio da maquete!
-      const ductEntryPos = new THREE.Vector3(lx, 1.25, 11.2);
-      const protoRoadPin = new THREE.Vector3(this.polePositionsX[i] - 1.25, 0.78, -4.65);
-      this.createRealisticJumperWire(
-        ductEntryPos,
-        protoRoadPin,
-        smartColors[i],
-        1.15 + (i % 3) * 0.28
-      );
-    }
-
-    // Cabos de alimentação 5V (Vermelho) e Terra GND (Preto) energizando os barramentos laterais da Protoboard-Rua
-    this.createRealisticJumperWire(
-      new THREE.Vector3(4.8, 1.25, 10.9),
-      new THREE.Vector3(21.5, 0.78, -5.15),
-      0xef4444,
-      1.35
-    );
-    this.createRealisticJumperWire(
-      new THREE.Vector3(5.1, 1.25, 10.9),
-      new THREE.Vector3(21.5, 0.78, 1.95),
-      0x0f172a,
-      1.25
-    );
-
-    // 6. MINI PROTOBOARD DO SENSOR LDR + RODA DE LUZ (em X = -15.5, Z = 13.0)
+    // 2. MINI PROTOBOARD DO SENSOR LDR + RODA DE LUZ (em X = -15.5, Z = 13.0) conectada ao Arduino Nano da Protoboard-Rua
     this.buildLdrSensorAndWheelModule(-15.5, 0.85, 13.0);
 
-    // 7. NOTEBOOK / PC COMO FONTE DE ALIMENTAÇÃO E CONEXÃO DO DASHBOARD VIA CABO USB NO ARDUINO
-    //    - Notebook posicionado na bancada com a tela exibindo o Dashboard de Energia & Telemetria ao vivo
-    //    - Cabo USB azul saindo da porta USB do Notebook e conectando diretamente na porta Mini-USB do Arduino Nano!
-    this.buildPowerSupplyModule(14.2, 0.65, 13.0);
+    // 3. NOTEBOOK / COMPUTADOR COMO ÚNICA FONTE DE ALIMENTAÇÃO (USB 5V) E CONEXÃO DO DASHBOARD NO ARDUINO DA RUA
     this.buildNotebookPcOnDesk(-29.5, -0.82, 4.5);
 
     this.scene.add(this.techBayGroup);
@@ -1567,9 +1511,8 @@ class MaquetePhysicalScene {
     this.notebookGroup = laptopGroup;
 
     // =========================================================================
-    // 3. CABOS USB AZUIS BLINDADOS CONECTANDO O NOTEBOOK AO ARDUINO NANO:
-    //    - Cabo USB 1: Sai da porta USB direita do Notebook -> Entra no Mini-USB do Arduino Nano na Protoboard-Rua!
-    //    - Cabo USB 2: Sai da porta USB direita do Notebook -> Entra no Arduino Nano da Área Técnica!
+    // 3. CABO USB AZUL BLINDADO CONECTANDO O NOTEBOOK AO ARDUINO NANO NA PROTOBOARD-RUA:
+    //    - O Notebook alimenta toda a maquete via USB 5V e recebe a telemetria para o Dashboard!
     // =========================================================================
     const usbCableMat = new THREE.MeshStandardMaterial({
       color: 0x0284c7,
@@ -1577,7 +1520,7 @@ class MaquetePhysicalScene {
       metalness: 0.15
     });
 
-    // Cabo USB Principal -> Arduino Nano na Protoboard-Rua (alimenta a rua e envia dados ao Dashboard)
+    // Cabo USB Principal -> Sai da porta USB do Notebook e conecta no Mini-USB do Arduino Nano na Protoboard-Rua
     const usbPointsStreet = [
       new THREE.Vector3(x + 4.4, y + 0.28, z - 1.2),   // Porta USB na lateral do Notebook
       new THREE.Vector3(-25.2, 0.35, 1.0),             // Passa sobre a bancada e sobe na borda de MDF
@@ -1591,154 +1534,6 @@ class MaquetePhysicalScene {
     );
     usbMeshStreet.castShadow = true;
     this.scene.add(usbMeshStreet);
-
-    // Cabo USB Secundário -> Arduino Nano na Área Técnica Frontal (sincronizado com o mesmo Notebook)
-    const usbPointsTech = [
-      new THREE.Vector3(x + 3.8, y + 0.28, z + 0.8),   // Segunda porta USB na lateral do Notebook
-      new THREE.Vector3(-24.8, 0.45, 9.5),             // Curva suave sobre a bancada
-      new THREE.Vector3(-19.5, 1.35, 13.0),            // Entra na Área Técnica
-      new THREE.Vector3(-8.7, 1.55, 13.0)              // Conector Mini-USB do Arduino Nano na Área Técnica!
-    ];
-    const usbCurveTech = new THREE.CatmullRomCurve3(usbPointsTech);
-    const usbMeshTech = new THREE.Mesh(
-      new THREE.TubeGeometry(usbCurveTech, 36, 0.11, 10, false),
-      usbCableMat
-    );
-    usbMeshTech.castShadow = true;
-    this.scene.add(usbMeshTech);
-  }
-
-  /**
-   * Constrói o ARDUINO NANO (ATmega328P) com riqueza de detalhes na protoboard:
-   * PCB Azul Clássico, MCU ATmega328P rotacionado a 45°, Cristal 16MHz, Conector Mini-USB metálico,
-   * Botão de Reset central, header ICSP de 6 pinos, 30 pinos serigrafados (D2-D12, A0-A7, 5V, GND, VIN) e LEDs ON/L/TX/RX.
-   */
-  buildArduinoNanoOnBreadboard(x, y, z) {
-    const nanoGroup = new THREE.Group();
-    nanoGroup.position.set(x, y, z);
-
-    const canvas = document.createElement('canvas');
-    canvas.width = 512;
-    canvas.height = 256;
-    const ctx = canvas.getContext('2d');
-
-    // PCB Azul Arduino Oficial (#005c99)
-    ctx.fillStyle = '#0369a1';
-    ctx.fillRect(0, 0, 512, 256);
-    ctx.strokeStyle = '#38bdf8';
-    ctx.lineWidth = 6;
-    ctx.strokeRect(4, 4, 504, 248);
-
-    // Serigrafia dos 30 pinos do Arduino Nano
-    const topPins = ['D12', 'D11', 'D10', 'D9', 'D8', 'D7', 'D6', 'D5', 'D4', 'D3', 'D2', 'GND', 'RST', 'RX0', 'TX1'];
-    const botPins = ['D13', '3V3', 'REF', 'A0', 'A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', '5V', 'RST', 'GND', 'VIN'];
-
-    ctx.font = 'bold 14px monospace';
-    ctx.textAlign = 'center';
-    for (let i = 0; i < 15; i++) {
-      const px = 42 + i * 30.5;
-      // Ilhas douradas
-      ctx.fillStyle = '#eab308';
-      ctx.beginPath(); ctx.arc(px, 22, 8, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(px, 234, 8, 0, Math.PI * 2); ctx.fill();
-      // Texto branco
-      ctx.fillStyle = '#ffffff';
-      ctx.fillText(topPins[i], px, 48);
-      ctx.fillText(botPins[i], px, 212);
-    }
-
-    // Logo Arduino Nano no centro da PCB
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 28px sans-serif';
-    ctx.fillText('ARDUINO', 295, 115);
-    ctx.fillStyle = '#bae6fd';
-    ctx.font = 'bold 22px monospace';
-    ctx.fillText('NANO V3.0', 295, 145);
-
-    const pcbTex = new THREE.CanvasTexture(canvas);
-    const pcbMesh = new THREE.Mesh(
-      new THREE.BoxGeometry(4.6, 0.16, 1.95),
-      new THREE.MeshStandardMaterial({ map: pcbTex, roughness: 0.35, metalness: 0.15 })
-    );
-    pcbMesh.castShadow = true;
-    nanoGroup.add(pcbMesh);
-
-    // Microcontrolador ATmega328P TQFP-32 (rotacionado a 45 graus como no Arduino Nano real)
-    const atmega = new THREE.Mesh(
-      new THREE.BoxGeometry(0.72, 0.14, 0.72),
-      new THREE.MeshStandardMaterial({ color: 0x09090b, roughness: 0.35 })
-    );
-    atmega.rotation.y = Math.PI / 4;
-    atmega.position.set(-0.35, 0.14, 0);
-    nanoGroup.add(atmega);
-
-    // Conector Mini-USB prateado na extremidade esquerda
-    const miniUsb = new THREE.Mesh(
-      new THREE.BoxGeometry(0.82, 0.34, 0.78),
-      new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.9, roughness: 0.18 })
-    );
-    miniUsb.position.set(-2.15, 0.22, 0);
-    nanoGroup.add(miniUsb);
-
-    // Botão de Reset tátil branco/prata
-    const rstBtn = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.14, 0.14, 0.18, 16),
-      new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.4 })
-    );
-    rstBtn.position.set(0.65, 0.16, 0);
-    nanoGroup.add(rstBtn);
-
-    // LEDs SMD do Arduino Nano (ON verde, PWM/L amarelo, TX/RX azul)
-    const ledOn = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.1, 0.18), new THREE.MeshBasicMaterial({ color: 0x22c55e }));
-    ledOn.position.set(-1.3, 0.13, 0.35);
-    nanoGroup.add(ledOn);
-
-    const ledL = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.1, 0.18), new THREE.MeshBasicMaterial({ color: 0xf59e0b }));
-    ledL.position.set(-1.3, 0.13, -0.35);
-    nanoGroup.add(ledL);
-
-    // Etiqueta flutuante identificando o Arduino Nano
-    const tagNano = this.createPcbTextLabel('ARDUINO NANO (ATmega328P)');
-    tagNano.scale.set(0.75, 0.75, 0.75);
-    tagNano.position.set(0, 0.25, 1.55);
-    nanoGroup.add(tagNano);
-
-    this.techBayGroup.add(nanoGroup);
-    this.arduinoNanoGroup = nanoGroup;
-  }
-
-  /**
-   * Constrói a placa ESP32 DevKit ao lado na mesma Protoboard (compatibilidade total com modo Wokwi/ESP32)
-   */
-  buildEsp32OnBreadboard(x, y, z) {
-    const espGroup = new THREE.Group();
-    espGroup.position.set(x, y, z);
-
-    const pcbMesh = new THREE.Mesh(
-      new THREE.BoxGeometry(3.2, 0.16, 1.95),
-      new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.4, metalness: 0.2 })
-    );
-    pcbMesh.castShadow = true;
-    espGroup.add(pcbMesh);
-
-    const shield = new THREE.Mesh(
-      new THREE.BoxGeometry(1.5, 0.22, 1.4),
-      new THREE.MeshStandardMaterial({ color: 0xcbd5e1, metalness: 0.85, roughness: 0.22 })
-    );
-    shield.position.set(-0.35, 0.18, 0);
-    espGroup.add(shield);
-
-    const ledPwr = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.1, 0.18), new THREE.MeshBasicMaterial({ color: 0xef4444 }));
-    ledPwr.position.set(1.1, 0.14, 0.4);
-    espGroup.add(ledPwr);
-
-    const tagEsp = this.createPcbTextLabel('MÓDULO ESP32 TELEMETRIA');
-    tagEsp.scale.set(0.68, 0.68, 0.68);
-    tagEsp.position.set(0, 0.25, 1.55);
-    espGroup.add(tagEsp);
-
-    this.techBayGroup.add(espGroup);
-    this.esp32Group = espGroup;
   }
 
   /**
@@ -1825,105 +1620,31 @@ class MaquetePhysicalScene {
 
     this.techBayGroup.add(ldrGroup);
 
-    // Jumpers conectando o módulo LDR ao pino A0 do Arduino Nano (Amarelo), 5V (Vermelho) e GND (Preto)
+    // Jumpers conectando o módulo LDR diretamente ao pino A0 (Amarelo) e 5V (Vermelho) do Arduino Nano na Protoboard-Rua!
     this.createRealisticJumperWire(
-      new THREE.Vector3(x + 1.2, 1.25, z),
-      new THREE.Vector3(-7.2, 1.45, 13.75),
+      new THREE.Vector3(x - 0.5, 1.25, z - 1.5),
+      new THREE.Vector3(-19.5, 0.96, -0.85),
       0xfacc15,
-      1.6
+      1.35
     );
     this.createRealisticJumperWire(
-      new THREE.Vector3(x + 1.2, 1.25, z + 0.4),
-      new THREE.Vector3(-5.8, 1.45, 13.75),
+      new THREE.Vector3(x + 0.5, 1.25, z - 1.5),
+      new THREE.Vector3(-19.1, 0.96, -0.85),
       0xef4444,
-      1.4
+      1.25
     );
   }
 
   /**
-   * Constrói a FONTE DE ALIMENTAÇÃO (Fonte Chaveada 9V/12V + Regulador 5V MB102 com Jack P4, Capacitor Eletrolítico e LED Power)
-   */
-  buildPowerSupplyModule(x, y, z) {
-    const pwrGroup = new THREE.Group();
-    pwrGroup.position.set(x, y, z);
-
-    // Carcaça da Fonte de Alimentação Externa (Caixa preta com ventilação e etiqueta 9V/12V 2A)
-    const adapterBox = new THREE.Mesh(
-      new THREE.BoxGeometry(5.2, 1.35, 3.8),
-      new THREE.MeshStandardMaterial({ color: 0x18181b, roughness: 0.45, metalness: 0.2 })
-    );
-    adapterBox.position.set(0, 0.68, 0);
-    adapterBox.castShadow = true;
-    pwrGroup.add(adapterBox);
-
-    // Conector Barrel Jack P4 + Chave Liga/Desliga vermelha + Regulador 7805 com dissipador de alumínio
-    const heatsink = new THREE.Mesh(
-      new THREE.BoxGeometry(0.95, 0.9, 1.2),
-      new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.85, roughness: 0.25 })
-    );
-    heatsink.position.set(-1.4, 1.55, -0.6);
-    pwrGroup.add(heatsink);
-
-    // Dois capacitores eletrolíticos cilíndricos
-    [-0.2, 0.65].forEach(cx => {
-      const cap = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.32, 0.32, 0.75, 16),
-        new THREE.MeshStandardMaterial({ color: 0x1e3a8a, metalness: 0.5, roughness: 0.3 })
-      );
-      cap.position.set(cx, 1.52, -0.6);
-      pwrGroup.add(cap);
-    });
-
-    // Botão Switch Vermelho ON/OFF
-    const powerSwitch = new THREE.Mesh(
-      new THREE.BoxGeometry(0.65, 0.35, 0.45),
-      new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.3 })
-    );
-    powerSwitch.position.set(1.65, 1.42, 0.5);
-    pwrGroup.add(powerSwitch);
-
-    // LED Verde Indicador de Alimentação 5V Ativa
-    const pwrLed = new THREE.Mesh(
-      new THREE.SphereGeometry(0.16, 12, 12),
-      new THREE.MeshBasicMaterial({ color: 0x22c55e })
-    );
-    pwrLed.position.set(-1.6, 1.42, 0.85);
-    pwrGroup.add(pwrLed);
-
-    const tagPwr = this.createPcbTextLabel('FONTE DE ALIMENTAÇÃO (5V / 9V DC)');
-    tagPwr.scale.set(0.75, 0.75, 0.75);
-    tagPwr.position.set(0, 0.48, 2.8);
-    pwrGroup.add(tagPwr);
-
-    this.techBayGroup.add(pwrGroup);
-
-    // Cabos de alimentação Positivo (Vermelho 5V) e Negativo (Preto GND) alimentando os barramentos da Protoboard Central
-    this.createRealisticJumperWire(
-      new THREE.Vector3(x - 2.2, 1.35, z - 0.5),
-      new THREE.Vector3(5.2, 1.25, 10.9),
-      0xef4444,
-      1.6
-    );
-    this.createRealisticJumperWire(
-      new THREE.Vector3(x - 2.2, 1.35, z + 0.5),
-      new THREE.Vector3(5.2, 1.25, 15.1),
-      0x09090b,
-      1.5
-    );
-  }
-
-  /**
-   * 3B. CAIXA TRANSPARENTE REMOVÍVEL DE ACRÍLICO SOBRE A ÁREA TÉCNICA
-   * Protege o Arduino Nano, a protoboard e a fonte de alimentação, permitindo visualizar o circuito nitidamente
-   * e podendo ser suspensa/removida com um clique!
+   * 3B. CAIXA TRANSPARENTE REMOVÍVEL DE ACRÍLICO SOBRE O MÓDULO LDR
    */
   buildRemovableAcrylicCover() {
     this.acrylicCoverGroup = new THREE.Group();
-    this.acrylicCoverGroup.position.set(0, 0.62, 13.0);
+    this.acrylicCoverGroup.position.set(-15.5, 0.62, 13.0);
 
-    const w = 44.2;
-    const h = 4.2;
-    const d = 7.8;
+    const w = 14.2;
+    const h = 3.8;
+    const d = 7.0;
 
     // Material de Acrílico Cristal Cortado a Laser (transparente com reflexo especular realista)
     const acrylicMat = new THREE.MeshPhysicalMaterial({
@@ -2108,24 +1829,21 @@ class MaquetePhysicalScene {
       this.controller.setLdrValue(450);
       window.dispatchEvent(new CustomEvent('maqueteLdrTurned', { detail: { value: 450 } }));
     } else if (mode === 'motion') {
-      this.autoTrafficEnabled = true;
+      this.autoTrafficEnabled = false;
       if (this.controller.isDay) {
         this.controller.setLdrValue(450);
         window.dispatchEvent(new CustomEvent('maqueteLdrTurned', { detail: { value: 450 } }));
       }
-      // Garante disparo imediato no poste central também para feedback instantâneo
-      this.controller.triggerManualPIR(2, true);
+      // Aciona a sequência da Mão 3D passando pelos sensores IR da rua (sem carros ou pessoas)
+      this.startHandWalkSequence();
     }
   }
 
   /**
-   * Dispara uma passagem de veículo em escala na rua da maquete
+   * Aciona sequência demonstrativa nos sensores IR da Protoboard-Rua
    */
   triggerMiniCarPass() {
-    this.autoTrafficEnabled = true;
-    if (this.miniCars.length > 0) {
-      this.miniCars[0].mesh.position.x = -21.0;
-    }
+    this.autoTrafficEnabled = false;
   }
 
   /**
@@ -2603,9 +2321,9 @@ class MaquetePhysicalScene {
     switch (presetName) {
       case 'esp32':
       case 'nano':
-        // Foco na Área Técnica (Arduino Nano + Protoboard + Fonte + Caixa Transparente)
-        this.camera.position.set(-2.5, 11.5, 25.5);
-        this.controls.target.set(-2.5, 1.2, 13.0);
+        // Foco no Arduino Nano encaixado na Protoboard-Rua + Cabo USB vindo do Notebook
+        this.camera.position.set(-19.5, 10.5, 11.5);
+        this.controls.target.set(-19.8, 1.0, -1.6);
         break;
       case 'pirs':
       case 'botoes':
